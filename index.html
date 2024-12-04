@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品検索マップ</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      position: relative;
+    }
+
+    /* 地図のスタイル */
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+
+    /* 店舗リストパネル */
+    #sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 300px;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
+      z-index: 1000;
+      padding-top: 60px; /* カテゴリ選択の高さを考慮 */
+    }
+
+    /* カテゴリ選択フォーム */
+    #category-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 300px;
+      z-index: 1001;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      box-sizing: border-box;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #category-select {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+      max-height: 200px; /* カテゴリが多い場合にスクロール可能にする */
+      overflow-y: auto;
+    }
+
+    /* 詳細パネル */
+    #detail-panel {
+      position: absolute;
+      top: 0;
+      left: 300px; /* サイドバーの幅と一致させる */
+      width: 300px;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      box-sizing: border-box;
+      z-index: 1000;
+      display: none;
+    }
+
+    #detail-panel .close-button {
+      text-align: right;
+      margin-bottom: 10px;
+    }
+
+    #detail-panel .close-button button {
+      background-color: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    /* 店舗リストのスタイル */
+    #store-list {
+      /* padding-top: 10px; */
+    }
+
+    .store-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+
+    .store-item:hover {
+      background-color: #f0f0f0;
+    }
+
+    .store-item strong {
+      color: #007bff;
+    }
+
+    /* 詳細パネルのスタイル調整 */
+    #detail-content {
+      padding: 10px;
+    }
+
+    #detail-content h3,
+    #detail-content h4 {
+      margin-top: 0;
+    }
+
+    #detail-content .result-item {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <!-- 地図を表示する領域 -->
+  <div id="map"></div>
+
+  <!-- カテゴリ選択フォーム -->
+  <div id="category-container">
+    <select id="category-select">
+      <!-- カテゴリオプションをここに動的に追加します -->
+    </select>
+  </div>
+
+  <!-- 左側の店舗リストパネル -->
+  <div id="sidebar">
+    <!-- 店舗リストを表示する領域 -->
+    <div id="store-list"></div>
+  </div>
+
+  <!-- 商品詳細を表示するパネル -->
+  <div id="detail-panel">
+    <div class="close-button">
+      <button id="close-detail">&times;</button>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.1.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.1.2/firebase-firestore-compat.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+  <!-- Firebase 初期化 -->
+  <script src="js/firebase-config.js"></script>
+
+  <!-- メインスクリプト -->
+  <script src="js/main.js"></script>
+</body>
+</html>
