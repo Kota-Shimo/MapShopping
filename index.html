@@ -6,33 +6,20 @@
   <title>商品検索マップ</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <style>
+    /* 共通スタイル */
     body {
       margin: 0;
       padding: 0;
       height: 100vh;
       font-family: Arial, sans-serif;
       position: relative;
+      overflow: hidden;
     }
 
     /* 地図のスタイル */
     #map {
       height: 100%;
       width: 100%;
-    }
-
-    /* 店舗リストパネル */
-    #sidebar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 300px;
-      height: 100%;
-      background-color: rgba(255, 255, 255, 0.9);
-      overflow-y: auto;
-      border-right: 1px solid #ccc;
-      box-sizing: border-box;
-      z-index: 1000;
-      padding-top: 60px; /* カテゴリ選択の高さを考慮 */
     }
 
     /* カテゴリ選択フォーム */
@@ -55,29 +42,49 @@
       border: 1px solid #ccc;
       border-radius: 5px;
       box-sizing: border-box;
-      max-height: 200px; /* カテゴリが多い場合にスクロール可能にする */
+      max-height: 200px;
       overflow-y: auto;
+    }
+
+    /* 店舗リストパネル */
+    #sidebar {
+      position: absolute;
+      top: 60px;
+      left: 0;
+      width: 300px;
+      height: calc(100% - 60px);
+      background-color: rgba(255, 255, 255, 0.9);
+      overflow-y: auto;
+      border-right: 1px solid #ccc;
+      box-sizing: border-box;
+      z-index: 1000;
+      display: none; /* 初期状態で非表示 */
     }
 
     /* 詳細パネル */
     #detail-panel {
       position: absolute;
       top: 0;
-      left: 300px; /* サイドバーの幅と一致させる */
+      left: 300px;
       width: 300px;
       height: 100%;
       background-color: rgba(255, 255, 255, 0.9);
       overflow-y: auto;
-      border-right: 1px solid #ccc;
-      padding: 10px;
+      border-left: 1px solid #ccc;
       box-sizing: border-box;
       z-index: 1000;
-      display: none;
+      display: none; /* 初期状態で非表示 */
     }
 
+    /* 詳細パネルの戻るボタン */
     #detail-panel .close-button {
+      position: sticky;
+      top: 0;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 10px;
       text-align: right;
-      margin-bottom: 10px;
+      box-sizing: border-box;
+      z-index: 1001;
     }
 
     #detail-panel .close-button button {
@@ -89,7 +96,7 @@
 
     /* 店舗リストのスタイル */
     #store-list {
-      /* padding-top: 10px; */
+      padding: 10px;
     }
 
     .store-item {
@@ -109,6 +116,7 @@
     /* 詳細パネルのスタイル調整 */
     #detail-content {
       padding: 10px;
+      padding-top: 50px; /* 戻るボタンの高さ分の余白を追加 */
     }
 
     #detail-content h3,
@@ -120,6 +128,72 @@
       margin-bottom: 10px;
       padding-bottom: 10px;
       border-bottom: 1px solid #eee;
+    }
+
+    /* モバイル用スタイル */
+    @media (max-width: 768px) {
+      /* カテゴリ選択フォーム */
+      #category-container {
+        width: 100%;
+        left: 0;
+      }
+
+      /* 店舗リストパネル */
+      #sidebar {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 0%;
+        max-height: 50%;
+        border-right: none;
+        border-top: 1px solid #ccc;
+        display: none; /* 初期状態で非表示 */
+        transition: height 0.3s ease;
+      }
+
+      #sidebar.open {
+        height: 50%;
+      }
+
+      /* 詳細パネル */
+      #detail-panel {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 0%;
+        max-height: 100%;
+        border-left: none;
+        border-top: 1px solid #ccc;
+        display: none; /* 初期状態で非表示 */
+        transition: height 0.3s ease;
+      }
+
+      #detail-panel.open {
+        display: block;
+        height: 50%;
+      }
+
+      #detail-panel.expanded {
+        height: 100%;
+      }
+
+      /* 詳細パネルの戻るボタン */
+      #detail-panel .close-button {
+        position: sticky;
+        top: 0;
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 10px;
+        text-align: right;
+        box-sizing: border-box;
+        z-index: 1001;
+      }
+
+      /* 詳細コンテンツのパディング調整 */
+      #detail-content {
+        padding-top: 50px; /* 戻るボタンの高さ分の余白を追加 */
+      }
     }
   </style>
 </head>
@@ -134,7 +208,7 @@
     </select>
   </div>
 
-  <!-- 左側の店舗リストパネル -->
+  <!-- 店舗リストパネル -->
   <div id="sidebar">
     <!-- 店舗リストを表示する領域 -->
     <div id="store-list"></div>

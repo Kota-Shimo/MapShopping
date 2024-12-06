@@ -9,16 +9,37 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
+// マーカーのデフォルトアイコン
+const defaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+  shadowSize: [41, 41]
+});
+
+// 選択されたマーカーのアイコン（赤色アイコン）
+const selectedIcon = L.icon({
+  iconUrl: 'marker-icon-red.png', // プロジェクト直下に配置してある赤いアイコンファイル
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+  shadowSize: [41, 41]
+});
+
 // マーカーを管理するためのレイヤーグループ
 const markersLayer = L.layerGroup().addTo(map);
 
-// ページロード時にカテゴリを取得してセレクトボックスに追加
+// 現在選択されているマーカー
+let currentSelectedMarker = null;
+
 window.addEventListener('DOMContentLoaded', loadCategories);
 
 async function loadCategories() {
   const categorySelect = document.getElementById('category-select');
-  
-  // 洋服関連のカテゴリを設定
+
   const categories = [
     { id: 'outerwear', name: 'アウターウェア' },
     { id: 'tops', name: 'トップス' },
@@ -30,7 +51,6 @@ async function loadCategories() {
     { id: 't-shirts', name: 'Tシャツ' },
     { id: 'denim', name: 'デニム' },
     { id: 'accessories', name: 'アクセサリー' },
-    // 他のカテゴリを追加
   ];
 
   categories.forEach(category => {
@@ -40,34 +60,37 @@ async function loadCategories() {
     categorySelect.appendChild(categoryOption);
   });
 
-  // カテゴリがロードされたら最初のカテゴリを選択
   if (categorySelect.options.length > 0) {
     categorySelect.selectedIndex = 0;
-    searchItems(); // 最初のカテゴリで検索を実行
+    searchItems(); 
   }
 }
 
-// カテゴリが変更されたときに検索を実行
 document.getElementById('category-select').addEventListener('change', searchItems);
+
+const sidebar = document.getElementById('sidebar');
+const detailPanel = document.getElementById("detail-panel");
 
 // 検索関数
 async function searchItems() {
   const categorySelect = document.getElementById('category-select');
   const selectedCategory = categorySelect.value;
 
-  // 地図と検索結果をクリア
   markersLayer.clearLayers();
   document.getElementById("store-list").innerHTML = "";
   document.getElementById("detail-content").innerHTML = "";
-  document.getElementById("detail-panel").style.display = "none";
+  detailPanel.style.display = "none";
+  detailPanel.classList.remove('open', 'expanded');
+
+  if (window.innerWidth <= 768) {
+    sidebar.classList.remove('open');
+  }
 
   let query;
-
   if (selectedCategory) {
-    // 特定のカテゴリ内で検索
-    query = db.collection('categories').doc(selectedCategory).collection('items');
+    // 全店舗横断で items を検索
+    query = db.collectionGroup('items').where('category_id', '==', selectedCategory);
   } else {
-    // カテゴリが選択されていない場合は何もしない
     alert("カテゴリを選択してください。");
     return;
   }
@@ -79,8 +102,13 @@ async function searchItems() {
     return;
   }
 
-  // 店舗ごとに商品をグループ化
-  const storeItemsMap = {}; // store_id をキー、商品リストを値とするオブジェクト
+  // 商品が見つかったのでサイドバーを表示
+  sidebar.style.display = "block";
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('open');
+  }
+
+  const storeItemsMap = {};
 
   querySnapshot.forEach(doc => {
     const item = doc.data();
@@ -96,27 +124,27 @@ async function searchItems() {
     return;
   }
 
-  // 店舗ごとに処理
   for (const storeId in storeItemsMap) {
     const items = storeItemsMap[storeId];
 
-    // 店舗情報を取得
     const storeRef = db.collection("stores").doc(storeId);
     const storeDoc = await storeRef.get();
 
     if (storeDoc.exists) {
       const store = storeDoc.data();
 
-      // マーカーを追加
-      const marker = L.marker([store.latitude, store.longitude]).addTo(markersLayer);
-      marker.storeId = storeId; // マーカーに storeId を付加
+      const marker = L.marker([store.latitude, store.longitude], { icon: defaultIcon }).addTo(markersLayer);
+      marker.storeId = storeId;
 
-      // マーカーのクリックイベント
       marker.on('click', () => {
         showDetailPanel(store, items);
+        if (currentSelectedMarker && currentSelectedMarker !== marker) {
+          currentSelectedMarker.setIcon(defaultIcon);
+        }
+        marker.setIcon(selectedIcon);
+        currentSelectedMarker = marker;
       });
 
-      // 店舗リストに追加
       const storeList = document.getElementById("store-list");
       const storeItem = document.createElement("div");
       storeItem.className = "store-item";
@@ -128,21 +156,22 @@ async function searchItems() {
         map.setView([store.latitude, store.longitude], 16);
         marker.openPopup();
         showDetailPanel(store, items);
+
+        if (currentSelectedMarker && currentSelectedMarker !== marker) {
+          currentSelectedMarker.setIcon(defaultIcon);
+        }
+        marker.setIcon(selectedIcon);
+        currentSelectedMarker = marker;
       };
       storeList.appendChild(storeItem);
     }
   }
 }
 
-// 詳細パネルを表示する関数
 function showDetailPanel(store, items) {
-  const detailPanel = document.getElementById("detail-panel");
   const detailContent = document.getElementById("detail-content");
-
-  // パネルの内容をクリア
   detailContent.innerHTML = '';
 
-  // 店舗情報を表示
   detailContent.innerHTML += `
     <h3>${store.name}</h3>
     <p>住所: ${store.address}</p>
@@ -150,21 +179,68 @@ function showDetailPanel(store, items) {
     <h4>商品一覧</h4>
   `;
 
-  // 商品リストを表示
+  // 画像表示追加: image_urlがあれば商品画像を表示
   items.forEach(item => {
+    const imageHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.variant_name}" style="max-width:100px;height:auto;"><br>` : '';
     detailContent.innerHTML += `
       <div class="result-item">
         <strong>${item.variant_name}</strong><br>
+        ${imageHtml}
         価格: ¥${item.price}<br><br>
       </div>
     `;
   });
 
-  // 詳細パネルを表示
   detailPanel.style.display = "block";
+  detailPanel.classList.add('open');
+
+  if (window.innerWidth <= 768) {
+    detailPanel.classList.add('open');
+    sidebar.classList.remove('open');
+  }
 }
 
-// 詳細パネルを閉じるボタンのイベントリスナー
 document.getElementById('close-detail').addEventListener('click', () => {
-  document.getElementById("detail-panel").style.display = "none";
+  detailPanel.style.display = "none";
+  detailPanel.classList.remove('open', 'expanded');
+
+  if (window.innerWidth <= 768) {
+    sidebar.classList.add('open');
+  }
+
+  if (currentSelectedMarker) {
+    currentSelectedMarker.setIcon(defaultIcon);
+    currentSelectedMarker = null;
+  }
+});
+
+let startY;
+let startHeight;
+let isDragging = false;
+
+detailPanel.addEventListener('touchstart', (e) => {
+  if (e.target !== detailPanel && !e.target.closest('.close-button')) return;
+  isDragging = true;
+  startY = e.touches[0].clientY;
+  startHeight = detailPanel.offsetHeight;
+});
+
+detailPanel.addEventListener('touchmove', (e) => {
+  if (!isDragging) return;
+  const deltaY = startY - e.touches[0].clientY;
+  let newHeight = startHeight + deltaY;
+
+  newHeight = Math.max(window.innerHeight * 0.3, Math.min(window.innerHeight, newHeight));
+
+  detailPanel.style.height = newHeight + 'px';
+
+  if (newHeight >= window.innerHeight * 0.9) {
+    detailPanel.classList.add('expanded');
+  } else {
+    detailPanel.classList.remove('expanded');
+  }
+});
+
+detailPanel.addEventListener('touchend', () => {
+  isDragging = false;
 });

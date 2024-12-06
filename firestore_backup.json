@@ -1,15 +1,4 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
-
-# Firebase 初期化
-if not firebase_admin._apps:
-    cred = credentials.Certificate("C:/Users/kotas/OneDrive/デスクトップ/MapShopping/firebase_key.json")  # サービスアカウントキーへのパス
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
-
-# ユーザーから提供された店舗情報（Pythonの辞書として定義）
-stores_data = {
+{
     "2gQimhkUzf2tU7Y9ZLas": {
         "address": "京都府京都市下京区麩屋町通高辻上ル鍋屋町244-1",
         "latitude": 35.00054907726847,
@@ -59,8 +48,3 @@ stores_data = {
         "name": "HUF Kyoto"
     }
 }
-
-# データベースへの書き込み
-for store_id, store_info in stores_data.items():
-    db.collection("stores").document(store_id).set(store_info)
-    print(f"店舗 '{store_info['name']}' (ID: {store_id}) を登録しました。")

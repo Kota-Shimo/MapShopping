@@ -1,3 +1,53 @@
+body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+}
+
+#category-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300px;
+  z-index: 1001;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+  box-sizing: border-box;
+  border-bottom: 1px solid #ccc;
+}
+
+#category-select {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+#sidebar {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  width: 300px;
+  height: calc(100% - 60px);
+  background-color: #fff;
+  overflow-y: auto;
+  border-right: 1px solid #ccc;
+  display: none; /* 初期状態で非表示にする */
+  z-index: 1000;
+}
+
 #detail-panel {
   position: absolute;
   top: 0;
@@ -7,6 +57,83 @@
   background-color: #fff;
   border-left: 1px solid #ccc;
   overflow-y: auto;
-  display: none;
+  display: none; /* 初期状態で非表示にする */
   z-index: 1000;
+}
+
+.store-item {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.store-item:hover {
+  background-color: #f0f0f0;
+}
+
+.store-item strong {
+  color: #007bff;
+}
+
+#detail-content {
+  padding: 10px;
+}
+
+#detail-content h3,
+#detail-content h4 {
+  margin-top: 0;
+}
+
+#detail-content .result-item {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* モバイル用スタイル */
+@media (max-width: 768px) {
+  #category-container {
+    width: 100%;
+    left: 0;
+  }
+
+  #sidebar {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%; /* 初期状態で高さを0にする */
+    max-height: 50%;
+    border-right: none;
+    border-top: 1px solid #ccc;
+    display: none; /* 初期状態で非表示にする */
+    transition: height 0.3s ease;
+  }
+
+  #sidebar.open {
+    display: block;
+    height: 50%;
+  }
+
+  #detail-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%; /* 初期状態で高さを0にする */
+    max-height: 100%;
+    border-left: none;
+    border-top: 1px solid #ccc;
+    display: none; /* 初期状態で非表示にする */
+    transition: height 0.3s ease;
+  }
+
+  #detail-panel.open {
+    display: block;
+    height: 50%;
+  }
+
+  #detail-panel.expanded {
+    height: 100%;
+  }
 }
