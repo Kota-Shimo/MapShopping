@@ -37,34 +37,27 @@ def extract_product_base_name(variant_name):
     return product_base
 
 def strict_image_search_by_color(product_name, color, products):
-    """color指定でHTMLから画像を厳密に検索:
-    1. colorを含むaltテキストの画像を全部探し、一番最初を返す
-    2. なければproduct_nameのみで再検索
-    3. なければfallback
-    """
     p_lower = product_name.lower()
     c_lower = color.lower()
 
-    # colorもproduct_nameも含むものを優先
-    candidates = []
+    # color+product_name含むaltを優先
+    color_candidates = []
     for hp in products:
         hname = hp["name"].lower()
         if c_lower in hname and p_lower in hname:
-            candidates.append(hp["image_url"])
+            color_candidates.append(hp["image_url"])
+    if color_candidates:
+        return color_candidates[0]
 
-    if candidates:
-        return candidates[0]
-
-    # colorが無いがproduct_nameが含まれる画像
-    candidates = []
+    # product_nameのみ
+    name_candidates = []
     for hp in products:
         hname = hp["name"].lower()
         if p_lower in hname:
-            candidates.append(hp["image_url"])
-    if candidates:
-        return candidates[0]
+            name_candidates.append(hp["image_url"])
+    if name_candidates:
+        return name_candidates[0]
 
-    # どれもなければfallback
     return None
 
 final_variants = []
@@ -174,7 +167,7 @@ except Exception as e:
 finally:
     driver.quit()
 
-# 色ごとにサイズ統合
+from collections import defaultdict
 grouped_by_color = defaultdict(lambda: {
     "product_name": None,
     "price": None,
@@ -207,44 +200,29 @@ def get_color_image(pdata):
     # 1. variantにimage_idがあればimage_map参照
     for var in pdata["variants_data"]:
         if var["image_id"] and var["image_id"] in var["image_map"]:
-            return var["image_map"][var["image_id"]]
+            img_url = var["image_map"][var["image_id"]]
+            # widthパラメータを変更
+            if img_url and "&width=" in img_url:
+                img_url = re.sub(r"&width=\d+", "&width=1024", img_url)
+            return img_url
 
     # 2. featured_imageあるvariant
     for var in pdata["variants_data"]:
         if var["featured_image"]:
-            return var["featured_image"]
+            img_url = var["featured_image"]
+            if img_url and "&width=" in img_url:
+                img_url = re.sub(r"&width=\d+", "&width=1024", img_url)
+            return img_url
 
     # 3. HTMLフォールバック(厳密)
-    # color指定で画像検索
     img = strict_image_search_by_color(pdata["product_name"], pdata["color"], products_from_html_all)
     if not img:
         img = fallback_image_url
+    else:
+        # 幅パラメータ調整
+        if "&width=" in img:
+            img = re.sub(r"&width=\d+", "&width=1024", img)
     return img
-
-def strict_image_search_by_color(product_name, color, products):
-    # color+product_nameが含まれるalt優先
-    p_lower = product_name.lower()
-    c_lower = color.lower()
-
-    color_candidates = []
-    for hp in products:
-        hname = hp["name"].lower()
-        if c_lower in hname and p_lower in hname:
-            color_candidates.append(hp["image_url"])
-    if color_candidates:
-        return color_candidates[0]
-
-    # colorなしでproduct_nameのみ
-    name_candidates = []
-    for hp in products:
-        hname = hp["name"].lower()
-        if p_lower in hname:
-            name_candidates.append(hp["image_url"])
-
-    if name_candidates:
-        return name_candidates[0]
-
-    return None
 
 batch = db.batch()
 index = 0
@@ -255,7 +233,7 @@ for (pid, color), pdata in grouped_by_color.items():
     safe_color = str(color).replace("/", "_")
     doc_id = f"{safe_pid}_{safe_color}"
 
-    doc_ref = db.collection("stores").document(store_id).collection("items").document(doc_id)
+    doc_ref = db.collection("stores").document(pdata["store_id"]).collection("items").document(doc_id)
     doc_data = {
         "product_name": pdata["product_name"],
         "price": pdata["price"],
@@ -270,6 +248,6 @@ for (pid, color), pdata in grouped_by_color.items():
 
 try:
     batch.commit()
-    print("改善版：色違い商品ごとに個別保存し、より厳密な画像マッチングを行いました。")
+    print("幅パラメータを変更して高解像度画像URLを保存しました。")
 except Exception as e:
     print(f"Firestore保存中にエラーが発生しました: {e}")

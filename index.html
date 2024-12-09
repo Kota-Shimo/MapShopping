@@ -21,7 +21,7 @@
       width: 100%;
     }
 
-    /* デスクトップでカテゴリは上部、sidebarはその直下に配置 */
+    /* カテゴリコンテナは上部左 */
     #category-container {
       position: absolute;
       top: 0;
@@ -44,17 +44,18 @@
       margin-bottom: 5px;
     }
 
+    /* sidebarの位置を少しずらして検索欄に被らないようにする */
     #sidebar {
       position: absolute;
-      top: 60px; 
-      left: 0;
-      width: 300px;
-      height: calc(100% - 60px);
+      top: 120px; /* 前回よりさらに下げて被らないように */
+      left: 10px;
+      width: 280px;
+      height: calc(100% - 120px);
       background-color: rgba(255, 255, 255, 0.9);
       overflow-y: auto;
-      border-right: 1px solid #ccc;
+      border: 1px solid #ccc;
       box-sizing: border-box;
-      z-index: 1000;
+      z-index: 3001;
       display: none;
       transition: height 0.3s ease;
     }
@@ -121,48 +122,40 @@
       padding: 10px;
     }
 
+    /* 常に2列表示 */
     #detail-content {
       flex: 1;
       overflow-y: auto;
       padding: 10px;
-    }
-
-    .store-item {
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-      cursor: pointer;
-    }
-
-    .store-item:hover {
-      background-color: #f0f0f0;
-    }
-
-    .store-item strong {
-      color: #007bff;
-    }
-
-    #detail-content h3,
-    #detail-content h4 {
-      margin-top: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-gap: 10px;
     }
 
     .result-item {
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid #eee;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .result-item img {
+      max-width: 100%;
+      height: auto;
+      cursor: pointer;
     }
 
     .modal-overlay {
       display: none;
       position: fixed;
       z-index: 3000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
       background: rgba(0,0,0,0.8);
-      align-items: center;
-      justify-content: center;
+      align-items: center; justify-content: center;
     }
 
     .modal-overlay.active {
@@ -171,13 +164,17 @@
 
     .modal-content {
       position: relative;
-      max-width: 90%;
-      max-height: 90%;
+      background: #fff;
+      /* ここでは特にmax-widthなど制限しないが画像で調整 */
+      padding:20px;
     }
 
     .modal-content img {
-      max-width: 100%;
-      max-height: 100%;
+      display:block;
+      margin:0 auto;
+      object-fit: contain;
+      max-width:90vw; /* ウェブ版でも画面幅の90%まで */
+      max-height:80vh; /* 画面高さの80%まで */
     }
 
     .modal-close {
@@ -195,6 +192,12 @@
       text-align: center;
     }
 
+    .modal-product-name, .modal-product-price, .modal-product-sizes, .modal-product-color {
+      padding: 5px 10px;
+      text-align: center;
+    }
+
+    /* スマホ用レイアウト */
     @media (max-width: 768px) {
       #category-container {
         top: 0;
@@ -210,32 +213,30 @@
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 0%;
-        max-height: 50%;
-        border-right: none;
-        border-top: 1px solid #ccc;
-        display: none;
-        transition: height 0.3s ease;
+        height:0%;
+        max-height:50%;
+        border-right:none;
+        border-top:1px solid #ccc;
+        display:none;
+        transition:height 0.3s ease;
       }
 
       #sidebar.open {
-        display: block;
-        height: 50%;
+        display:block;
+        height:50%;
       }
 
       #detail-panel {
-        top: auto;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        border-left: none;
-        border-top: 1px solid #ccc;
-        transition: height 0.3s ease;
+        top:auto;
+        bottom:0;
+        left:0;
+        width:100%;
+        border-left:none;
+        border-top:1px solid #ccc;
+        transition:height 0.3s ease;
       }
 
-      #detail-content {
-        padding-top: 10px; 
-      }
+      /* スマホでも2列表示を維持するため、ここでは1列化しない */
     }
   </style>
 </head>
@@ -262,6 +263,10 @@
     <div class="modal-content">
       <button class="modal-close" id="modal-close">&times;</button>
       <img id="modal-image" src="" alt="拡大画像">
+      <div class="modal-product-name" id="modal-product-name"></div>
+      <div class="modal-product-price" id="modal-product-price"></div>
+      <div class="modal-product-sizes" id="modal-product-sizes"></div>
+      <div class="modal-product-color" id="modal-product-color"></div>
     </div>
   </div>
 
@@ -324,6 +329,10 @@
     const modalOverlay = document.getElementById('modal-overlay');
     const modalImage = document.getElementById('modal-image');
     const modalClose = document.getElementById('modal-close');
+    const modalProductName = document.getElementById('modal-product-name');
+    const modalProductPrice = document.getElementById('modal-product-price');
+    const modalProductSizes = document.getElementById('modal-product-sizes');
+    const modalProductColor = document.getElementById('modal-product-color');
 
     let storeItemsMap = {};
     let storeDataMap = {}; 
@@ -332,7 +341,6 @@
 
     let currentlyOpenedStore = null;
     let currentlyOpenedAllItems = null; 
-    // 全アイテムの原本（フィルタ前）を保持し、常にこれを参照して色フィルタを再適用する
 
     window.addEventListener('DOMContentLoaded', loadCategories);
 
@@ -369,7 +377,6 @@
       currentCategory = categorySelect.value;
       await searchItems();
       applyFilters();
-      // カテゴリ変更時、detailPanel開いていたら閉じる
       if (!detailPanel.classList.contains('collapsed')) {
         detailPanel.classList.remove('open','expanded');
         detailPanel.classList.add('collapsed');
@@ -488,7 +495,6 @@
 
         marker.on('click', () => {
           showDetailPanel(store, storeItemsMap[storeId]); 
-          // ここではフィルタ前の全アイテム(storeItemsMap[storeId])を渡す
           if (currentSelectedMarker && currentSelectedMarker !== marker) {
             currentSelectedMarker.setIcon(defaultIcon);
           }
@@ -506,7 +512,6 @@
           map.setView([store.latitude, store.longitude], 16);
           marker.openPopup();
           showDetailPanel(store, storeItemsMap[storeId]); 
-          // 全アイテム原本を渡す
 
           if (currentSelectedMarker && currentSelectedMarker !== marker) {
             currentSelectedMarker.setIcon(defaultIcon);
@@ -520,34 +525,36 @@
 
     function showDetailPanel(store, allItems) {
       currentlyOpenedStore = store;
-      currentlyOpenedAllItems = [...allItems]; // 全アイテムの原本を保持
-      // 初回表示時は色フィルタ適用
+      currentlyOpenedAllItems = [...allItems]; 
       let filtered = applyColorFilter(currentlyOpenedAllItems);
       renderDetailPanel(filtered);
     }
 
     function renderDetailPanel(items) {
-      detailContent.innerHTML = `<h4>商品情報</h4>`;
+      detailContent.innerHTML = '';
       if (items.length === 0) {
-        detailContent.innerHTML += `<p>該当する商品がありません。</p>`;
+        const msg = document.createElement('div');
+        msg.textContent = "該当する商品がありません。";
+        detailContent.appendChild(msg);
       } else {
         items.forEach(item => {
           const resultItem = document.createElement('div');
           resultItem.className = 'result-item';
-          resultItem.innerHTML = `
-            <h3>${item.product_name}</h3>
-            <img src="${item.image_url}" alt="${item.product_name}" style="max-width:100px;height:auto;display:block;cursor:pointer;"><br>
-            価格: ¥${item.price}<br>
-            ${item.sizes && item.sizes.length > 0 ? "サイズ: " + item.sizes.join(", ") + "<br>" : ""}
-            ${item.color ? "色: " + item.color : ""}
-          `;
 
-          const imgEl = resultItem.querySelector('img');
+          const imgEl = document.createElement('img');
+          imgEl.src = item.image_url;
+          imgEl.alt = item.product_name || 'No Name';
+
           imgEl.addEventListener('click', () => {
             modalImage.src = item.image_url;
+            modalProductName.textContent = item.product_name || '';
+            modalProductPrice.textContent = item.price ? `価格：¥${item.price}` : '';
+            modalProductSizes.textContent = item.sizes && item.sizes.length > 0 ? `サイズ：${item.sizes.join(", ")}` : '';
+            modalProductColor.textContent = item.color ? `色：${item.color}` : '';
             modalOverlay.classList.add('active');
           });
 
+          resultItem.appendChild(imgEl);
           detailContent.appendChild(resultItem);
         });
       }
