@@ -21,32 +21,32 @@
       width: 100%;
     }
 
+    /* デスクトップでカテゴリは上部、sidebarはその直下に配置 */
     #category-container {
       position: absolute;
       top: 0;
       left: 0;
       width: 300px;
-      z-index: 1001;
+      z-index: 2001;
       background-color: rgba(255, 255, 255, 0.9);
       padding: 10px;
       box-sizing: border-box;
       border-bottom: 1px solid #ccc;
     }
 
-    #category-select {
+    #category-container select {
       width: 100%;
-      padding: 10px;
-      font-size: 16px;
+      padding: 8px;
+      font-size: 14px;
       border: 1px solid #ccc;
       border-radius: 5px;
       box-sizing: border-box;
-      max-height: 200px;
-      overflow-y: auto;
+      margin-bottom: 5px;
     }
 
     #sidebar {
       position: absolute;
-      top: 60px;
+      top: 60px; 
       left: 0;
       width: 300px;
       height: calc(100% - 60px);
@@ -55,7 +55,12 @@
       border-right: 1px solid #ccc;
       box-sizing: border-box;
       z-index: 1000;
-      display: none; /* 初期状態非表示 */
+      display: none;
+      transition: height 0.3s ease;
+    }
+
+    #sidebar.open {
+      display: block;
     }
 
     #detail-panel {
@@ -147,10 +152,57 @@
       border-bottom: 1px solid #eee;
     }
 
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      z-index: 3000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      position: relative;
+      max-width: 90%;
+      max-height: 90%;
+    }
+
+    .modal-content img {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #fff;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      line-height: 32px;
+      text-align: center;
+    }
+
     @media (max-width: 768px) {
       #category-container {
+        top: 0;
+        bottom: auto;
         width: 100%;
         left: 0;
+        border-bottom:1px solid #ccc;
+        border-top:none;
       }
 
       #sidebar {
@@ -191,6 +243,9 @@
   <div id="map"></div>
   <div id="category-container">
     <select id="category-select"></select>
+    <select id="color-select">
+      <option value="">All Colors</option>
+    </select>
   </div>
   <div id="sidebar">
     <div id="store-list"></div>
@@ -201,6 +256,13 @@
       <button id="close-detail">&times;</button>
     </div>
     <div id="detail-content"></div>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" id="modal-close">&times;</button>
+      <img id="modal-image" src="" alt="拡大画像">
+    </div>
   </div>
 
   <!-- Firebase SDK -->
@@ -251,10 +313,30 @@
     const markersLayer = L.layerGroup().addTo(map);
     let currentSelectedMarker = null;
 
+    const categorySelect = document.getElementById('category-select');
+    const colorSelect = document.getElementById('color-select');
+    const sidebar = document.getElementById('sidebar');
+    const storeList = document.getElementById('store-list');
+    const detailPanel = document.getElementById("detail-panel");
+    const detailContent = document.getElementById("detail-content");
+    const closeDetailBtn = document.getElementById('close-detail');
+
+    const modalOverlay = document.getElementById('modal-overlay');
+    const modalImage = document.getElementById('modal-image');
+    const modalClose = document.getElementById('modal-close');
+
+    let storeItemsMap = {};
+    let storeDataMap = {}; 
+    let currentCategory = "";
+    let currentColor = "";
+
+    let currentlyOpenedStore = null;
+    let currentlyOpenedAllItems = null; 
+    // 全アイテムの原本（フィルタ前）を保持し、常にこれを参照して色フィルタを再適用する
+
     window.addEventListener('DOMContentLoaded', loadCategories);
 
     async function loadCategories() {
-      const categorySelect = document.getElementById('category-select');
       const categories = [
         { id: 'outerwear', name: 'アウターウェア' },
         { id: 'tops', name: 'トップス' },
@@ -277,37 +359,60 @@
 
       if (categorySelect.options.length > 0) {
         categorySelect.selectedIndex = 0;
-        searchItems(); 
+        currentCategory = categorySelect.value;
+        await searchItems(); 
+        applyFilters();
       }
     }
 
-    document.getElementById('category-select').addEventListener('change', searchItems);
+    categorySelect.addEventListener('change', async () => {
+      currentCategory = categorySelect.value;
+      await searchItems();
+      applyFilters();
+      // カテゴリ変更時、detailPanel開いていたら閉じる
+      if (!detailPanel.classList.contains('collapsed')) {
+        detailPanel.classList.remove('open','expanded');
+        detailPanel.classList.add('collapsed');
+        currentlyOpenedStore = null;
+        currentlyOpenedAllItems = null;
+        if (window.innerWidth <= 768) {
+          sidebar.classList.add('open');
+        }
+        if (currentSelectedMarker) {
+          currentSelectedMarker.setIcon(defaultIcon);
+          currentSelectedMarker = null;
+        }
+      }
+    });
 
-    const sidebar = document.getElementById('sidebar');
-    const detailPanel = document.getElementById("detail-panel");
+    colorSelect.addEventListener('change', () => {
+      currentColor = colorSelect.value;
+      applyFilters();
+      if (detailPanel.classList.contains('open') || detailPanel.classList.contains('expanded')) {
+        reShowDetailPanelWithColor();
+      }
+    });
 
     async function searchItems() {
-      const categorySelect = document.getElementById('category-select');
-      const selectedCategory = categorySelect.value;
+      if (!currentCategory) return;
 
       markersLayer.clearLayers();
-      document.getElementById("store-list").innerHTML = "";
-      document.getElementById("detail-content").innerHTML = "";
+      storeList.innerHTML = "";
+      detailContent.innerHTML = "";
+      currentlyOpenedStore = null;
+      currentlyOpenedAllItems = null;
 
       if (window.innerWidth <= 768) {
         sidebar.classList.remove('open');
       }
 
-      if (!selectedCategory) {
-        alert("カテゴリを選択してください。");
-        return;
-      }
-
-      let query = db.collectionGroup('items').where('category_id', '==', selectedCategory);
+      let query = db.collectionGroup('items').where('category_id', '==', currentCategory);
       const querySnapshot = await query.get();
 
       if (querySnapshot.empty) {
         alert("該当する商品が見つかりませんでした。");
+        storeItemsMap = {};
+        storeDataMap = {};
         return;
       }
 
@@ -316,7 +421,11 @@
         sidebar.classList.add('open');
       }
 
-      const storeItemsMap = {};
+      storeItemsMap = {};
+      storeDataMap = {};
+      let colorSet = new Set();
+      const storeIds = new Set();
+
       querySnapshot.forEach(doc => {
         const item = doc.data();
         const storeId = item.store_id;
@@ -324,74 +433,124 @@
           storeItemsMap[storeId] = [];
         }
         storeItemsMap[storeId].push(item);
+        if (item.color) colorSet.add(item.color);
+        storeIds.add(storeId);
       });
 
-      if (Object.keys(storeItemsMap).length === 0) {
-        alert("該当する商品が見つかりませんでした。");
-        return;
-      }
+      updateColorFilter(Array.from(colorSet));
+
+      const promises = [];
+      storeIds.forEach(storeId => {
+        const p = db.collection("stores").doc(storeId).get().then(storeDoc => {
+          if (storeDoc.exists) {
+            storeDataMap[storeId] = storeDoc.data();
+          }
+        });
+        promises.push(p);
+      });
+      await Promise.all(promises);
+
+      applyFilters();
+    }
+
+    function updateColorFilter(colors) {
+      colorSelect.innerHTML = `<option value="">All Colors</option>`;
+      colors.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        colorSelect.appendChild(opt);
+      });
+      currentColor = "";
+    }
+
+    function applyFilters() {
+      markersLayer.clearLayers();
+      storeList.innerHTML = "";
+      detailContent.innerHTML = "";
+
+      if (!storeItemsMap || Object.keys(storeItemsMap).length === 0) return;
 
       for (const storeId in storeItemsMap) {
-        const items = storeItemsMap[storeId];
-        const storeRef = db.collection("stores").doc(storeId);
-        const storeDoc = await storeRef.get();
+        let items = storeItemsMap[storeId];
 
-        if (storeDoc.exists) {
-          const store = storeDoc.data();
-
-          const marker = L.marker([store.latitude, store.longitude], { icon: defaultIcon }).addTo(markersLayer);
-          marker.storeId = storeId;
-
-          marker.on('click', () => {
-            showDetailPanel(store, items);
-            if (currentSelectedMarker && currentSelectedMarker !== marker) {
-              currentSelectedMarker.setIcon(defaultIcon);
-            }
-            marker.setIcon(selectedIcon);
-            currentSelectedMarker = marker;
-          });
-
-          const storeList = document.getElementById("store-list");
-          const storeItem = document.createElement("div");
-          storeItem.className = "store-item";
-          storeItem.innerHTML = `
-            <strong>${store.name}</strong><br>
-            住所: ${store.address}
-          `;
-          storeItem.onclick = () => {
-            map.setView([store.latitude, store.longitude], 16);
-            marker.openPopup();
-            showDetailPanel(store, items);
-
-            if (currentSelectedMarker && currentSelectedMarker !== marker) {
-              currentSelectedMarker.setIcon(defaultIcon);
-            }
-            marker.setIcon(selectedIcon);
-            currentSelectedMarker = marker;
-          };
-          storeList.appendChild(storeItem);
+        if (currentColor) {
+          items = items.filter(i => i.color && i.color.toLowerCase() === currentColor.toLowerCase());
         }
+
+        if (items.length === 0) continue;
+
+        const store = storeDataMap[storeId];
+        if (!store) continue; 
+
+        const marker = L.marker([store.latitude, store.longitude], { icon: defaultIcon }).addTo(markersLayer);
+        marker.storeId = storeId;
+
+        marker.on('click', () => {
+          showDetailPanel(store, storeItemsMap[storeId]); 
+          // ここではフィルタ前の全アイテム(storeItemsMap[storeId])を渡す
+          if (currentSelectedMarker && currentSelectedMarker !== marker) {
+            currentSelectedMarker.setIcon(defaultIcon);
+          }
+          marker.setIcon(selectedIcon);
+          currentSelectedMarker = marker;
+        });
+
+        const sItem = document.createElement("div");
+        sItem.className = "store-item";
+        sItem.innerHTML = `
+          <strong>${store.name}</strong><br>
+          住所: ${store.address}
+        `;
+        sItem.onclick = () => {
+          map.setView([store.latitude, store.longitude], 16);
+          marker.openPopup();
+          showDetailPanel(store, storeItemsMap[storeId]); 
+          // 全アイテム原本を渡す
+
+          if (currentSelectedMarker && currentSelectedMarker !== marker) {
+            currentSelectedMarker.setIcon(defaultIcon);
+          }
+          marker.setIcon(selectedIcon);
+          currentSelectedMarker = marker;
+        };
+        storeList.appendChild(sItem);
       }
     }
 
-    function showDetailPanel(store, items) {
-      const detailContent = document.getElementById("detail-content");
-      detailContent.innerHTML = '';
+    function showDetailPanel(store, allItems) {
+      currentlyOpenedStore = store;
+      currentlyOpenedAllItems = [...allItems]; // 全アイテムの原本を保持
+      // 初回表示時は色フィルタ適用
+      let filtered = applyColorFilter(currentlyOpenedAllItems);
+      renderDetailPanel(filtered);
+    }
 
-      // 複数商品がある場合は全て表示
-      // 住所は表示しない、商品名は商品ごとに1回だけ表示
-      // itemsは複数商品分が入っている可能性あり
+    function renderDetailPanel(items) {
       detailContent.innerHTML = `<h4>商品情報</h4>`;
-      items.forEach(item => {
-        detailContent.innerHTML += `
-          <div class="result-item">
+      if (items.length === 0) {
+        detailContent.innerHTML += `<p>該当する商品がありません。</p>`;
+      } else {
+        items.forEach(item => {
+          const resultItem = document.createElement('div');
+          resultItem.className = 'result-item';
+          resultItem.innerHTML = `
             <h3>${item.product_name}</h3>
-            <img src="${item.image_url}" alt="${item.product_name}" style="max-width:100px;height:auto;display:block;"><br>
+            <img src="${item.image_url}" alt="${item.product_name}" style="max-width:100px;height:auto;display:block;cursor:pointer;"><br>
             価格: ¥${item.price}<br>
-            ${item.sizes && item.sizes.length > 0 ? "サイズ: " + item.sizes.join(", ") : ""}
-          </div>
-        `;
-      });
+            ${item.sizes && item.sizes.length > 0 ? "サイズ: " + item.sizes.join(", ") + "<br>" : ""}
+            ${item.color ? "色: " + item.color : ""}
+          `;
+
+          const imgEl = resultItem.querySelector('img');
+          imgEl.addEventListener('click', () => {
+            modalImage.src = item.image_url;
+            modalOverlay.classList.add('active');
+          });
+
+          detailContent.appendChild(resultItem);
+        });
+      }
 
       detailPanel.classList.remove('collapsed','open','expanded');
       if (window.innerWidth <= 768) {
@@ -402,9 +561,24 @@
       }
     }
 
+    function reShowDetailPanelWithColor() {
+      if (!currentlyOpenedStore || !currentlyOpenedAllItems) return;
+      let filtered = applyColorFilter(currentlyOpenedAllItems);
+      renderDetailPanel(filtered);
+    }
+
+    function applyColorFilter(items) {
+      if (currentColor) {
+        return items.filter(i => i.color && i.color.toLowerCase() === currentColor.toLowerCase());
+      }
+      return items;
+    }
+
     document.getElementById('close-detail').addEventListener('click', () => {
       detailPanel.classList.remove('open','expanded');
       detailPanel.classList.add('collapsed');
+      currentlyOpenedStore = null;
+      currentlyOpenedAllItems = null;
 
       if (window.innerWidth <= 768) {
         sidebar.classList.add('open');
@@ -413,6 +587,15 @@
       if (currentSelectedMarker) {
         currentSelectedMarker.setIcon(defaultIcon);
         currentSelectedMarker = null;
+      }
+    });
+
+    modalClose.addEventListener('click', () => {
+      modalOverlay.classList.remove('active');
+    });
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        modalOverlay.classList.remove('active');
       }
     });
 
