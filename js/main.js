@@ -2,14 +2,11 @@
 const db = firebase.firestore();
 
 // 地図の初期化
-const map = L.map('map').setView([35.0116, 135.7681], 13); // 京都市を中心に表示
-
-// OpenStreetMap のタイルを追加
+const map = L.map('map').setView([35.0116, 135.7681], 13); 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-// マーカーのデフォルトアイコン
 const defaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
   iconSize: [25, 41],
@@ -19,9 +16,8 @@ const defaultIcon = L.icon({
   shadowSize: [41, 41]
 });
 
-// 選択されたマーカーのアイコン（赤色アイコン）
 const selectedIcon = L.icon({
-  iconUrl: 'marker-icon-red.png', // プロジェクト直下に配置してある赤いアイコンファイル
+  iconUrl: 'marker-icon-red.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -29,17 +25,13 @@ const selectedIcon = L.icon({
   shadowSize: [41, 41]
 });
 
-// マーカーを管理するためのレイヤーグループ
 const markersLayer = L.layerGroup().addTo(map);
-
-// 現在選択されているマーカー
 let currentSelectedMarker = null;
 
 window.addEventListener('DOMContentLoaded', loadCategories);
 
 async function loadCategories() {
   const categorySelect = document.getElementById('category-select');
-
   const categories = [
     { id: 'outerwear', name: 'アウターウェア' },
     { id: 'tops', name: 'トップス' },
@@ -71,7 +63,6 @@ document.getElementById('category-select').addEventListener('change', searchItem
 const sidebar = document.getElementById('sidebar');
 const detailPanel = document.getElementById("detail-panel");
 
-// 検索関数
 async function searchItems() {
   const categorySelect = document.getElementById('category-select');
   const selectedCategory = categorySelect.value;
@@ -79,8 +70,11 @@ async function searchItems() {
   markersLayer.clearLayers();
   document.getElementById("store-list").innerHTML = "";
   document.getElementById("detail-content").innerHTML = "";
-  detailPanel.style.display = "none";
-  detailPanel.classList.remove('open', 'expanded');
+
+  // detail-panelをcollapsedに
+  detailPanel.classList.remove('open','expanded','collapsed');
+  detailPanel.classList.add('collapsed');
+  // collapsedでheight:0%となるためdisplay:blockのままでOK
 
   if (window.innerWidth <= 768) {
     sidebar.classList.remove('open');
@@ -88,7 +82,6 @@ async function searchItems() {
 
   let query;
   if (selectedCategory) {
-    // 全店舗横断で items を検索
     query = db.collectionGroup('items').where('category_id', '==', selectedCategory);
   } else {
     alert("カテゴリを選択してください。");
@@ -102,14 +95,12 @@ async function searchItems() {
     return;
   }
 
-  // 商品が見つかったのでサイドバーを表示
   sidebar.style.display = "block";
   if (window.innerWidth <= 768) {
     sidebar.classList.add('open');
   }
 
   const storeItemsMap = {};
-
   querySnapshot.forEach(doc => {
     const item = doc.data();
     const storeId = item.store_id;
@@ -126,7 +117,6 @@ async function searchItems() {
 
   for (const storeId in storeItemsMap) {
     const items = storeItemsMap[storeId];
-
     const storeRef = db.collection("stores").doc(storeId);
     const storeDoc = await storeRef.get();
 
@@ -179,7 +169,6 @@ function showDetailPanel(store, items) {
     <h4>商品一覧</h4>
   `;
 
-  // 画像表示追加: image_urlがあれば商品画像を表示
   items.forEach(item => {
     const imageHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.variant_name}" style="max-width:100px;height:auto;"><br>` : '';
     detailContent.innerHTML += `
@@ -191,7 +180,8 @@ function showDetailPanel(store, items) {
     `;
   });
 
-  detailPanel.style.display = "block";
+  // 表示をopen状態に
+  detailPanel.classList.remove('collapsed','expanded');
   detailPanel.classList.add('open');
 
   if (window.innerWidth <= 768) {
@@ -201,8 +191,8 @@ function showDetailPanel(store, items) {
 }
 
 document.getElementById('close-detail').addEventListener('click', () => {
-  detailPanel.style.display = "none";
-  detailPanel.classList.remove('open', 'expanded');
+  detailPanel.classList.remove('open','expanded');
+  detailPanel.classList.add('collapsed');
 
   if (window.innerWidth <= 768) {
     sidebar.classList.add('open');
@@ -214,33 +204,46 @@ document.getElementById('close-detail').addEventListener('click', () => {
   }
 });
 
+// スライディングシートのドラッグ処理
 let startY;
 let startHeight;
 let isDragging = false;
+const handleBar = document.querySelector('#detail-panel .handle-bar');
 
-detailPanel.addEventListener('touchstart', (e) => {
-  if (e.target !== detailPanel && !e.target.closest('.close-button')) return;
+handleBar.addEventListener('touchstart', (e) => {
   isDragging = true;
   startY = e.touches[0].clientY;
   startHeight = detailPanel.offsetHeight;
 });
 
-detailPanel.addEventListener('touchmove', (e) => {
+handleBar.addEventListener('touchmove', (e) => {
   if (!isDragging) return;
   const deltaY = startY - e.touches[0].clientY;
   let newHeight = startHeight + deltaY;
 
-  newHeight = Math.max(window.innerHeight * 0.3, Math.min(window.innerHeight, newHeight));
+  const screenHeight = window.innerHeight;
+  newHeight = Math.max(0, Math.min(screenHeight, newHeight));
 
   detailPanel.style.height = newHeight + 'px';
-
-  if (newHeight >= window.innerHeight * 0.9) {
-    detailPanel.classList.add('expanded');
-  } else {
-    detailPanel.classList.remove('expanded');
-  }
 });
 
-detailPanel.addEventListener('touchend', () => {
+handleBar.addEventListener('touchend', () => {
   isDragging = false;
+  const currentHeight = detailPanel.offsetHeight;
+  const screenHeight = window.innerHeight;
+  const ratio = currentHeight / screenHeight;
+
+  if (ratio >= 0.7) {
+    detailPanel.classList.remove('open','collapsed');
+    detailPanel.classList.add('expanded');
+    detailPanel.style.height = '100%';
+  } else if (ratio >= 0.3) {
+    detailPanel.classList.remove('expanded','collapsed');
+    detailPanel.classList.add('open');
+    detailPanel.style.height = '50%';
+  } else {
+    detailPanel.classList.remove('open','expanded');
+    detailPanel.classList.add('collapsed');
+    detailPanel.style.height = '0%';
+  }
 });
