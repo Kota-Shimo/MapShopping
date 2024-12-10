@@ -21,7 +21,6 @@
       width: 100%;
     }
 
-    /* カテゴリコンテナは上部左 */
     #category-container {
       position: absolute;
       top: 0;
@@ -36,18 +35,17 @@
 
     #category-container select {
       width: 100%;
-      padding: 8px;
-      font-size: 14px;
+      padding: 10px;
+      font-size: 20px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 10px;
       box-sizing: border-box;
       margin-bottom: 5px;
     }
 
-    /* sidebarの位置を少しずらして検索欄に被らないようにする */
     #sidebar {
       position: absolute;
-      top: 120px; /* 前回よりさらに下げて被らないように */
+      top: 120px;
       left: 10px;
       width: 280px;
       height: calc(100% - 120px);
@@ -114,6 +112,8 @@
       border-radius: 2px;
       margin: 10px auto;
       cursor: grab;
+      /* 追加: スクロール抑制 */
+      touch-action: none;
     }
 
     .close-button {
@@ -122,7 +122,6 @@
       padding: 10px;
     }
 
-    /* 常に2列表示 */
     #detail-content {
       flex: 1;
       overflow-y: auto;
@@ -165,7 +164,6 @@
     .modal-content {
       position: relative;
       background: #fff;
-      /* ここでは特にmax-widthなど制限しないが画像で調整 */
       padding:20px;
     }
 
@@ -173,8 +171,8 @@
       display:block;
       margin:0 auto;
       object-fit: contain;
-      max-width:90vw; /* ウェブ版でも画面幅の90%まで */
-      max-height:80vh; /* 画面高さの80%まで */
+      max-width:90vw;
+      max-height:80vh;
     }
 
     .modal-close {
@@ -197,7 +195,6 @@
       text-align: center;
     }
 
-    /* スマホ用レイアウト */
     @media (max-width: 768px) {
       #category-container {
         top: 0;
@@ -235,8 +232,6 @@
         border-top:1px solid #ccc;
         transition:height 0.3s ease;
       }
-
-      /* スマホでも2列表示を維持するため、ここでは1列化しない */
     }
   </style>
 </head>
@@ -606,46 +601,99 @@
       }
     });
 
+    // ==== 慣性+スナップ＆感度向上対応 START ====
+    const handleBar = document.querySelector('#detail-panel .handle-bar');
     let startY;
     let startHeight;
     let isDragging = false;
-    const handleBar = document.querySelector('#detail-panel .handle-bar');
+
+    let lastY = 0;
+    let lastTime = 0;
+    let velocity = 0;
+    const friction = 0.95;
+    const animationThreshold = 0.001;
+    let animationFrameId = null;
+
+    const snapPoints = [0, 0.5, 1.0]; // collapsed(0%), open(50%), expanded(100%)
 
     handleBar.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       isDragging = true;
+      cancelAnimationFrame(animationFrameId);
       startY = e.touches[0].clientY;
       startHeight = detailPanel.offsetHeight;
-    });
+      lastY = startY;
+      lastTime = performance.now();
+      velocity = 0;
+    }, { passive: false });
 
     handleBar.addEventListener('touchmove', (e) => {
+      e.preventDefault();
       if (!isDragging) return;
-      const deltaY = startY - e.touches[0].clientY;
+      const currentY = e.touches[0].clientY;
+      const deltaY = startY - currentY;
+      const screenHeight = window.innerHeight;
       let newHeight = startHeight + deltaY;
-
-      const screenHeight = window.innerHeight;
       newHeight = Math.max(0, Math.min(screenHeight, newHeight));
-
       detailPanel.style.height = newHeight + 'px';
-    });
 
-    handleBar.addEventListener('touchend', () => {
+      // 速度計算
+      const now = performance.now();
+      const dt = now - lastTime;
+      if (dt > 0) {
+        velocity = (lastY - currentY) / dt; // px/ms
+      }
+      lastY = currentY;
+      lastTime = now;
+    }, { passive: false });
+
+    handleBar.addEventListener('touchend', (e) => {
+      e.preventDefault();
       isDragging = false;
-      const currentHeight = detailPanel.offsetHeight;
       const screenHeight = window.innerHeight;
-      const ratio = currentHeight / screenHeight;
+      let currentPanelHeight = detailPanel.offsetHeight;
 
-      detailPanel.classList.remove('open','expanded','collapsed');
-      if (ratio >= 0.7) {
-        detailPanel.classList.add('expanded');
-        detailPanel.style.height = '100%';
-      } else if (ratio >= 0.3) {
+      function animateInertia() {
+        currentPanelHeight -= velocity * 16; 
+        velocity *= friction;
+
+        currentPanelHeight = Math.max(0, Math.min(screenHeight, currentPanelHeight));
+        detailPanel.style.height = currentPanelHeight + 'px';
+
+        if (Math.abs(velocity) > animationThreshold) {
+          animationFrameId = requestAnimationFrame(animateInertia);
+        } else {
+          snapToNearestPoint(currentPanelHeight / screenHeight);
+        }
+      }
+
+      animateInertia();
+    }, { passive: false });
+
+    function snapToNearestPoint(ratio) {
+      let closest = snapPoints[0];
+      let closestDist = Math.abs(ratio - closest);
+      for (let i = 1; i < snapPoints.length; i++) {
+        const dist = Math.abs(ratio - snapPoints[i]);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = snapPoints[i];
+        }
+      }
+
+      detailPanel.classList.remove('collapsed','open','expanded');
+      if (closest === 0) {
+        detailPanel.classList.add('collapsed');
+        detailPanel.style.height = '0%';
+      } else if (closest === 0.5) {
         detailPanel.classList.add('open');
         detailPanel.style.height = '50%';
       } else {
-        detailPanel.classList.add('collapsed');
-        detailPanel.style.height = '0%';
+        detailPanel.classList.add('expanded');
+        detailPanel.style.height = '100%';
       }
-    });
+    }
+    // ==== 慣性+スナップ＆感度向上対応 END ====
   </script>
 </body>
 </html>
