@@ -475,49 +475,52 @@
     }
 
     function enableFlickOnHandle(panel){
-      const handle=panel.querySelector('.handle-bar');
       let startY=0;
       let lastY=0;
 
-      handle.addEventListener('touchstart',(e)=>{
+      panel.addEventListener('touchstart',(e)=>{
         if(window.innerWidth<=768){
-          e.preventDefault();
+          // フリック判定用のスタート位置を保存
           startY=e.touches[0].clientY;
           lastY=startY;
         }
       },{passive:false});
-      handle.addEventListener('touchmove',(e)=>{
+      
+      panel.addEventListener('touchmove',(e)=>{
         if(window.innerWidth<=768){
-          e.preventDefault();
+          // スクロールは許可するため、基本的にpreventDefaultはしない
           lastY=e.touches[0].clientY;
         }
       },{passive:false});
-      handle.addEventListener('touchend',(e)=>{
+
+      panel.addEventListener('touchend',(e)=>{
         if(window.innerWidth>768)return;
-        const deltaY=startY-lastY;
+        const deltaY=startY - lastY;
+        const threshold = 50; // フリック感度の調整はこの値を変更
+
         const isOpen=panel.classList.contains('open');
         const isExpanded=panel.classList.contains('expanded');
 
-        // openで上フリック→expanded
-        // expandedで下フリック→open
-        // openで下フリック→collapsed
-        if(isOpen){
-          if(deltaY>0){
-            // 上フリック: open→expanded
-            setPanelState(panel,'expanded');
-          }else if(deltaY<0){
-            // 下フリック: open→collapsed
-            setPanelState(panel,'collapsed');
-            if(panel===sidebar) lastCollapsedPanel='sidebar';
-            else if(panel===detailPanel) lastCollapsedPanel='detail';
-            currentlyOpenedStore=null; currentlyOpenedAllItems=null;
-          }
-        }else if(isExpanded){
-          if(deltaY<0){
-            // 下フリック: expanded→open
-            setPanelState(panel,'open');
+        if(Math.abs(deltaY) > threshold) {
+          if(isOpen){
+            if(deltaY>0){
+              // 上フリック: open→expanded
+              setPanelState(panel,'expanded');
+            }else if(deltaY<0){
+              // 下フリック: open→collapsed
+              setPanelState(panel,'collapsed');
+              if(panel===sidebar) lastCollapsedPanel='sidebar';
+              else if(panel===detailPanel) lastCollapsedPanel='detail';
+              currentlyOpenedStore=null; currentlyOpenedAllItems=null;
+            }
+          }else if(isExpanded){
+            if(deltaY<0){
+              // 下フリック: expanded→open
+              setPanelState(panel,'open');
+            }
           }
         }
+
       },{passive:true});
     }
 
