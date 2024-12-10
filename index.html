@@ -4,234 +4,115 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>商品検索マップ</title>
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      font-family: Arial, sans-serif;
-      position: relative;
-      overflow: hidden;
+      margin:0; padding:0; height:100vh; font-family:Arial,sans-serif; position:relative; overflow:hidden;
     }
-
-    #map {
-      height: 100%;
-      width: 100%;
-    }
+    #map { height:100%; width:100%; }
 
     #category-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 300px;
-      z-index: 2001;
-      background-color: rgba(255, 255, 255, 0.9);
-      padding: 10px;
-      box-sizing: border-box;
-      border-bottom: 1px solid #ccc;
+      position:absolute; top:0; left:0; width:300px; z-index:9999;
+      background:rgba(255,255,255,0.9); padding:10px; box-sizing:border-box; border-bottom:1px solid #ccc;
     }
-
     #category-container select {
-      width: 100%;
-      padding: 10px;
-      font-size: 20px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      box-sizing: border-box;
-      margin-bottom: 5px;
+      width:100%; padding:8px; font-size:14px; border:1px solid #ccc; border-radius:5px;
+      box-sizing:border-box; margin-bottom:5px;
     }
 
     #sidebar {
-      position: absolute;
-      top: 120px;
-      left: 10px;
-      width: 280px;
-      height: calc(100% - 120px);
-      background-color: rgba(255, 255, 255, 0.9);
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-      z-index: 3001;
-      display: none;
-      transition: height 0.3s ease;
+      position:absolute; top:120px; left:10px; width:280px; height:calc(100% - 120px);
+      background:rgba(255,255,255,0.9); overflow-y:auto; border:1px solid #ccc; box-sizing:border-box;
+      z-index:3001; display:none; transition:height 0.3s ease;
     }
-
-    #sidebar.open {
-      display: block;
-    }
+    #sidebar.open { display:block; }
 
     #detail-panel {
-      position: absolute;
-      top: 0;
-      left: 300px;
-      width: 300px;
-      background-color: rgba(255, 255, 255, 0.9);
-      border-left: 1px solid #ccc;
-      box-sizing: border-box;
-      z-index: 1000;
-      transition: height 0.3s ease;
+      position:absolute; top:0; left:300px; width:300px;
+      background:rgba(255,255,255,0.9); border-left:1px solid #ccc; box-sizing:border-box;
+      z-index:5000; 
+      transition:height 0.3s ease;
     }
-
-    #detail-panel.collapsed {
-      display: none;
+    #detail-panel.collapsed { display:none; }
+    #detail-panel.open, #detail-panel.expanded {
+      display:flex; flex-direction:column;
     }
-
-    #detail-panel.open,
-    #detail-panel.expanded {
-      display: flex;
-      flex-direction: column;
+    @media (min-width:769px) {
+      #detail-panel.expanded { height:100%; }
     }
-
-    @media (min-width: 769px) {
-      #detail-panel.expanded {
-        height: 100%;
-      }
-    }
-
-    #detail-panel.open {
-      height: 50%;
-    }
-
-    #detail-panel.expanded {
-      height: 100%;
-    }
+    #detail-panel.open { height:50%; }
 
     .handle-bar, .close-button {
-      position: sticky;
-      top: 0;
-      background: #fff;
-      z-index: 1001;
+      position:sticky; top:0; background:#fff; z-index:1001;
     }
-
     .handle-bar {
-      width: 50px;
-      height: 5px;
-      background: #aaa;
-      border-radius: 2px;
-      margin: 10px auto;
-      cursor: grab;
-      /* 追加: スクロール抑制 */
-      touch-action: none;
+      width:50px; height:20px; /* 高さ拡大 */
+      background:#aaa; border-radius:10px; margin:10px auto; cursor:grab;
+      touch-action:none; /* ブラウザのスクロールを抑制してフリック検出を確実に */
     }
-
     .close-button {
-      text-align: right;
-      border-bottom: 1px solid #ccc;
-      padding: 10px;
+      text-align:right; border-bottom:1px solid #ccc; padding:10px;
     }
 
     #detail-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-gap: 10px;
+      flex:1; overflow-y:auto; padding:10px;
+      display:grid; grid-template-columns:1fr 1fr; grid-gap:10px;
     }
 
     .result-item {
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
+      background:#fff; border:1px solid #ccc; padding:10px;
+      display:flex; align-items:center; justify-content:center; flex-direction:column;
     }
-
-    .result-item img {
-      max-width: 100%;
-      height: auto;
-      cursor: pointer;
-    }
+    .result-item img { max-width:100%; height:auto; cursor:pointer; }
 
     .modal-overlay {
-      display: none;
-      position: fixed;
-      z-index: 3000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      align-items: center; justify-content: center;
+      display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.8); align-items:center; justify-content:center;
     }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
+    .modal-overlay.active { display:flex; }
     .modal-content {
-      position: relative;
-      background: #fff;
-      padding:20px;
+      position:relative; background:#fff; padding:20px;
     }
-
     .modal-content img {
-      display:block;
-      margin:0 auto;
-      object-fit: contain;
-      max-width:90vw;
-      max-height:80vh;
+      display:block; margin:0 auto; object-fit:contain; max-width:90vw; max-height:80vh;
     }
-
     .modal-close {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #fff;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      line-height: 32px;
-      text-align: center;
+      position:absolute; top:10px; right:10px; background:#fff; border:none; font-size:20px; cursor:pointer;
+      border-radius:50%; width:32px; height:32px; line-height:32px; text-align:center;
     }
-
     .modal-product-name, .modal-product-price, .modal-product-sizes, .modal-product-color {
-      padding: 5px 10px;
-      text-align: center;
+      padding:5px 10px; text-align:center;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width:768px) {
       #category-container {
-        top: 0;
-        bottom: auto;
-        width: 100%;
-        left: 0;
-        border-bottom:1px solid #ccc;
-        border-top:none;
+        top:0; bottom:auto; width:100%; left:0; border-bottom:1px solid #ccc; border-top:none;
       }
 
       #sidebar {
-        top: auto;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height:0%;
-        max-height:50%;
-        border-right:none;
-        border-top:1px solid #ccc;
-        display:none;
-        transition:height 0.3s ease;
-      }
-
-      #sidebar.open {
-        display:block;
-        height:50%;
+        top:auto; bottom:0; left:0; width:100%; border-right:none; border-top:1px solid #ccc; 
+        transition:height 0.3s ease; z-index:4000;
       }
 
       #detail-panel {
-        top:auto;
-        bottom:0;
-        left:0;
-        width:100%;
-        border-left:none;
-        border-top:1px solid #ccc;
-        transition:height 0.3s ease;
+        top:auto; bottom:0; left:0; width:100%;
+        border-left:none; border-top:1px solid #ccc; transition:height 0.3s ease;
       }
+
+      #detail-panel.expanded {
+        top:60px !important;
+        height:calc(100% - 60px) !important;
+      }
+    }
+
+    #list-bar {
+      position:absolute; bottom:0; left:0; width:100%;
+      background:rgba(255,255,255,0.9); border-top:1px solid #ccc; box-sizing:border-box;
+      text-align:center; padding:10px; display:none; z-index:6001;
+    }
+    #list-bar button {
+      padding:10px 20px; border:1px solid #ccc; border-radius:10px;
+      font-size:16px; cursor:pointer; background:#f0f0f0;
     }
   </style>
 </head>
@@ -243,18 +124,22 @@
       <option value="">All Colors</option>
     </select>
   </div>
-  <div id="sidebar">
+  <div id="sidebar" class="collapsed">
+    <div class="handle-bar" id="sidebar-handle"></div>
     <div id="store-list"></div>
   </div>
+
+  <div id="list-bar">
+    <button id="show-list-button">リスト表示</button>
+  </div>
+
   <div id="detail-panel" class="collapsed">
-    <div class="handle-bar"></div>
-    <div class="close-button">
-      <button id="close-detail">&times;</button>
-    </div>
+    <div class="handle-bar" id="detail-handle"></div>
+    <div class="close-button"><button id="close-detail">&times;</button></div>
     <div id="detail-content"></div>
   </div>
 
-  <div class="modal-overlay" id="modal-overlay">
+  <div id="modal-overlay" class="modal-overlay">
     <div class="modal-content">
       <button class="modal-close" id="modal-close">&times;</button>
       <img id="modal-image" src="" alt="拡大画像">
@@ -265,435 +150,386 @@
     </div>
   </div>
 
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.1.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.1.2/firebase-firestore-compat.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
-  <!-- Firebase 初期化 -->
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyBIMBWXXx5fd3wJGUUT8c1ban56czRMITQ",
-      authDomain: "mapshopping-80415.firebaseapp.com",
-      projectId: "mapshopping-80415",
-      storageBucket: "mapshopping-80415.appspot.com",
-      messagingSenderId: "298544341559",
-      appId: "1:298544341559:web:9f019bdbae1d7e5837d5b2",
-      measurementId: "G-6B5HP3JHGB"
+      apiKey:"...",
+      authDomain:"mapshopping-80415.firebaseapp.com",
+      projectId:"mapshopping-80415",
+      storageBucket:"mapshopping-80415.appspot.com",
+      messagingSenderId:"298544341559",
+      appId:"1:298544341559:web:9f019bdbae1d7e5837d5b2",
+      measurementId:"G-6B5HP3JHGB"
     };
     firebase.initializeApp(firebaseConfig);
-  </script>
-
-  <script>
     const db = firebase.firestore();
 
-    const map = L.map('map').setView([35.0116, 135.7681], 13); 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+    const map = L.map('map').setView([35.0116,135.7681],13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    const defaultIcon = L.icon({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
-      shadowSize: [41, 41]
-    });
-
-    const selectedIcon = L.icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
-      shadowSize: [41, 41]
-    });
-
     const markersLayer = L.layerGroup().addTo(map);
-    let currentSelectedMarker = null;
 
-    const categorySelect = document.getElementById('category-select');
-    const colorSelect = document.getElementById('color-select');
-    const sidebar = document.getElementById('sidebar');
-    const storeList = document.getElementById('store-list');
-    const detailPanel = document.getElementById("detail-panel");
-    const detailContent = document.getElementById("detail-content");
-    const closeDetailBtn = document.getElementById('close-detail');
+    const defaultIcon=L.icon({
+      iconUrl:'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+      iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],
+      shadowUrl:'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+      shadowSize:[41,41]
+    });
+    const selectedIcon=L.icon({
+      iconUrl:'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+      iconSize:[25,41],iconAnchor:[12,41],popupAnchor:[1,-34],
+      shadowUrl:'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png',
+      shadowSize:[41,41]
+    });
 
-    const modalOverlay = document.getElementById('modal-overlay');
-    const modalImage = document.getElementById('modal-image');
-    const modalClose = document.getElementById('modal-close');
-    const modalProductName = document.getElementById('modal-product-name');
-    const modalProductPrice = document.getElementById('modal-product-price');
-    const modalProductSizes = document.getElementById('modal-product-sizes');
-    const modalProductColor = document.getElementById('modal-product-color');
+    let currentSelectedMarker=null;
 
-    let storeItemsMap = {};
-    let storeDataMap = {}; 
-    let currentCategory = "";
-    let currentColor = "";
+    const categorySelect=document.getElementById('category-select');
+    const colorSelect=document.getElementById('color-select');
+    const sidebar=document.getElementById('sidebar');
+    const storeList=document.getElementById('store-list');
+    const detailPanel=document.getElementById("detail-panel");
+    const detailContent=document.getElementById("detail-content");
+    const closeDetailBtn=document.getElementById('close-detail');
+    const listBar=document.getElementById('list-bar');
+    const showListButton=document.getElementById('show-list-button');
 
-    let currentlyOpenedStore = null;
-    let currentlyOpenedAllItems = null; 
+    const modalOverlay=document.getElementById('modal-overlay');
+    const modalImage=document.getElementById('modal-image');
+    const modalClose=document.getElementById('modal-close');
+    const modalProductName=document.getElementById('modal-product-name');
+    const modalProductPrice=document.getElementById('modal-product-price');
+    const modalProductSizes=document.getElementById('modal-product-sizes');
+    const modalProductColor=document.getElementById('modal-product-color');
+
+    let storeItemsMap={};
+    let storeDataMap={};
+    let currentCategory="";
+    let currentColor="";
+    let currentlyOpenedStore=null;
+    let currentlyOpenedAllItems=null;
+
+    let lastCollapsedPanel='sidebar';
+
+    function applyColorFilter(items){
+      if(currentColor){
+        return items.filter(i=>i.color&&i.color.toLowerCase()===currentColor.toLowerCase());
+      }
+      return items;
+    }
 
     window.addEventListener('DOMContentLoaded', loadCategories);
 
-    async function loadCategories() {
-      const categories = [
-        { id: 'outerwear', name: 'アウターウェア' },
-        { id: 'tops', name: 'トップス' },
-        { id: 'bottoms', name: 'ボトムス' },
-        { id: 'jackets', name: 'ジャケット' },
-        { id: 'shirts', name: 'シャツ' },
-        { id: 'pants', name: 'パンツ' },
-        { id: 'sweatshirts', name: 'スウェットシャツ' },
-        { id: 't-shirts', name: 'Tシャツ' },
-        { id: 'denim', name: 'デニム' },
-        { id: 'accessories', name: 'アクセサリー' },
+    async function loadCategories(){
+      const categories=[
+        {id:'outerwear',name:'アウターウェア'},
+        {id:'tops',name:'トップス'},
+        {id:'bottoms',name:'ボトムス'},
+        {id:'jackets',name:'ジャケット'},
+        {id:'shirts',name:'シャツ'},
+        {id:'pants',name:'パンツ'},
+        {id:'sweatshirts',name:'スウェットシャツ'},
+        {id:'t-shirts',name:'Tシャツ'},
+        {id:'denim',name:'デニム'},
+        {id:'accessories',name:'アクセサリー'},
       ];
-
-      categories.forEach(category => {
-        const categoryOption = document.createElement('option');
-        categoryOption.value = category.id;
-        categoryOption.textContent = category.name;
-        categorySelect.appendChild(categoryOption);
+      categories.forEach(category=>{
+        const opt=document.createElement('option');
+        opt.value=category.id; opt.textContent=category.name;
+        categorySelect.appendChild(opt);
       });
 
-      if (categorySelect.options.length > 0) {
-        categorySelect.selectedIndex = 0;
-        currentCategory = categorySelect.value;
-        await searchItems(); 
-        applyFilters();
+      if(categorySelect.options.length>0){
+        categorySelect.selectedIndex=0;
+        currentCategory=categorySelect.value;
+        await searchItems(); applyFilters();
       }
     }
 
-    categorySelect.addEventListener('change', async () => {
-      currentCategory = categorySelect.value;
-      await searchItems();
-      applyFilters();
-      if (!detailPanel.classList.contains('collapsed')) {
-        detailPanel.classList.remove('open','expanded');
-        detailPanel.classList.add('collapsed');
-        currentlyOpenedStore = null;
-        currentlyOpenedAllItems = null;
-        if (window.innerWidth <= 768) {
-          sidebar.classList.add('open');
+    categorySelect.addEventListener('change',async()=>{
+      currentCategory=categorySelect.value;
+      await searchItems(); applyFilters();
+      if(!detailPanel.classList.contains('collapsed')){
+        setPanelState(detailPanel,'collapsed');
+        currentlyOpenedStore=null; currentlyOpenedAllItems=null;
+        if(window.innerWidth<=768){
+          setPanelState(sidebar,'open');
         }
-        if (currentSelectedMarker) {
+        if(currentSelectedMarker){
           currentSelectedMarker.setIcon(defaultIcon);
-          currentSelectedMarker = null;
+          currentSelectedMarker=null;
         }
       }
     });
 
-    colorSelect.addEventListener('change', () => {
-      currentColor = colorSelect.value;
+    colorSelect.addEventListener('change',()=>{
+      currentColor=colorSelect.value;
       applyFilters();
-      if (detailPanel.classList.contains('open') || detailPanel.classList.contains('expanded')) {
+      if(detailPanel.classList.contains('open')||detailPanel.classList.contains('expanded')){
         reShowDetailPanelWithColor();
       }
     });
 
-    async function searchItems() {
-      if (!currentCategory) return;
-
+    async function searchItems(){
+      if(!currentCategory)return;
       markersLayer.clearLayers();
-      storeList.innerHTML = "";
-      detailContent.innerHTML = "";
-      currentlyOpenedStore = null;
-      currentlyOpenedAllItems = null;
+      storeList.innerHTML="";
+      detailContent.innerHTML="";
+      currentlyOpenedStore=null; currentlyOpenedAllItems=null;
 
-      if (window.innerWidth <= 768) {
-        sidebar.classList.remove('open');
-      }
+      if(window.innerWidth<=768) setPanelState(sidebar,'open');
 
-      let query = db.collectionGroup('items').where('category_id', '==', currentCategory);
-      const querySnapshot = await query.get();
-
-      if (querySnapshot.empty) {
+      const query=db.collectionGroup('items').where('category_id','==',currentCategory);
+      const querySnapshot=await query.get();
+      if(querySnapshot.empty){
         alert("該当する商品が見つかりませんでした。");
-        storeItemsMap = {};
-        storeDataMap = {};
+        storeItemsMap={}; storeDataMap={};
         return;
       }
 
-      sidebar.style.display = "block";
-      if (window.innerWidth <= 768) {
-        sidebar.classList.add('open');
-      }
+      sidebar.style.display="block";
+      if(window.innerWidth<=768) setPanelState(sidebar,'open');
 
-      storeItemsMap = {};
-      storeDataMap = {};
-      let colorSet = new Set();
-      const storeIds = new Set();
-
-      querySnapshot.forEach(doc => {
-        const item = doc.data();
-        const storeId = item.store_id;
-        if (!storeItemsMap[storeId]) {
-          storeItemsMap[storeId] = [];
-        }
+      storeItemsMap={}; storeDataMap={};
+      let colorSet=new Set();
+      let storeIds=new Set();
+      querySnapshot.forEach(doc=>{
+        const item=doc.data();
+        const storeId=item.store_id;
+        if(!storeItemsMap[storeId])storeItemsMap[storeId]=[];
         storeItemsMap[storeId].push(item);
-        if (item.color) colorSet.add(item.color);
+        if(item.color)colorSet.add(item.color);
         storeIds.add(storeId);
       });
-
       updateColorFilter(Array.from(colorSet));
 
-      const promises = [];
-      storeIds.forEach(storeId => {
-        const p = db.collection("stores").doc(storeId).get().then(storeDoc => {
-          if (storeDoc.exists) {
-            storeDataMap[storeId] = storeDoc.data();
-          }
-        });
-        promises.push(p);
+      const promises=[];
+      storeIds.forEach(storeId=>{
+        promises.push(db.collection("stores").doc(storeId).get().then(storeDoc=>{
+          if(storeDoc.exists) storeDataMap[storeId]=storeDoc.data();
+        }));
       });
       await Promise.all(promises);
-
       applyFilters();
     }
 
-    function updateColorFilter(colors) {
-      colorSelect.innerHTML = `<option value="">All Colors</option>`;
-      colors.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
+    function updateColorFilter(colors){
+      colorSelect.innerHTML='<option value="">All Colors</option>';
+      colors.forEach(c=>{
+        const opt=document.createElement('option');
+        opt.value=c; opt.textContent=c;
         colorSelect.appendChild(opt);
       });
-      currentColor = "";
+      currentColor="";
     }
 
-    function applyFilters() {
+    function applyFilters(){
       markersLayer.clearLayers();
-      storeList.innerHTML = "";
-      detailContent.innerHTML = "";
+      storeList.innerHTML="";
+      detailContent.innerHTML="";
 
-      if (!storeItemsMap || Object.keys(storeItemsMap).length === 0) return;
+      if(!storeItemsMap||Object.keys(storeItemsMap).length===0)return;
+      for(const storeId in storeItemsMap){
+        let items=storeItemsMap[storeId];
+        items=applyColorFilter(items);
+        if(items.length===0)continue;
+        const store=storeDataMap[storeId];
+        if(!store)continue;
 
-      for (const storeId in storeItemsMap) {
-        let items = storeItemsMap[storeId];
-
-        if (currentColor) {
-          items = items.filter(i => i.color && i.color.toLowerCase() === currentColor.toLowerCase());
-        }
-
-        if (items.length === 0) continue;
-
-        const store = storeDataMap[storeId];
-        if (!store) continue; 
-
-        const marker = L.marker([store.latitude, store.longitude], { icon: defaultIcon }).addTo(markersLayer);
-        marker.storeId = storeId;
-
-        marker.on('click', () => {
-          showDetailPanel(store, storeItemsMap[storeId]); 
-          if (currentSelectedMarker && currentSelectedMarker !== marker) {
+        const marker=L.marker([store.latitude,store.longitude],{icon:defaultIcon}).addTo(markersLayer);
+        marker.storeId=storeId;
+        marker.on('click',()=>{
+          showDetailPanel(store,storeItemsMap[storeId]);
+          if(currentSelectedMarker&&currentSelectedMarker!==marker){
             currentSelectedMarker.setIcon(defaultIcon);
           }
           marker.setIcon(selectedIcon);
-          currentSelectedMarker = marker;
+          currentSelectedMarker=marker;
         });
 
-        const sItem = document.createElement("div");
-        sItem.className = "store-item";
-        sItem.innerHTML = `
+        const sItem=document.createElement('div');
+        sItem.className="store-item";
+        sItem.innerHTML=`
           <strong>${store.name}</strong><br>
-          住所: ${store.address}
+          住所:${store.address}
         `;
-        sItem.onclick = () => {
-          map.setView([store.latitude, store.longitude], 16);
+        sItem.onclick=()=>{
+          map.setView([store.latitude,store.longitude],16);
           marker.openPopup();
-          showDetailPanel(store, storeItemsMap[storeId]); 
-
-          if (currentSelectedMarker && currentSelectedMarker !== marker) {
+          showDetailPanel(store,storeItemsMap[storeId]);
+          if(currentSelectedMarker&&currentSelectedMarker!==marker){
             currentSelectedMarker.setIcon(defaultIcon);
           }
           marker.setIcon(selectedIcon);
-          currentSelectedMarker = marker;
+          currentSelectedMarker=marker;
         };
         storeList.appendChild(sItem);
       }
     }
 
-    function showDetailPanel(store, allItems) {
-      currentlyOpenedStore = store;
-      currentlyOpenedAllItems = [...allItems]; 
-      let filtered = applyColorFilter(currentlyOpenedAllItems);
+    function showDetailPanel(store,allItems){
+      currentlyOpenedStore=store;
+      currentlyOpenedAllItems=[...allItems];
+      let filtered=applyColorFilter(currentlyOpenedAllItems);
       renderDetailPanel(filtered);
+      if(window.innerWidth<=768){
+        setPanelState(sidebar,'collapsed'); lastCollapsedPanel='sidebar';
+        setPanelState(detailPanel,'open');
+      }else{
+        setPanelState(detailPanel,'expanded');
+      }
     }
 
-    function renderDetailPanel(items) {
-      detailContent.innerHTML = '';
-      if (items.length === 0) {
-        const msg = document.createElement('div');
-        msg.textContent = "該当する商品がありません。";
+    function renderDetailPanel(items){
+      detailContent.innerHTML='';
+      if(items.length===0){
+        const msg=document.createElement('div');
+        msg.textContent="該当する商品がありません。";
         detailContent.appendChild(msg);
-      } else {
-        items.forEach(item => {
-          const resultItem = document.createElement('div');
-          resultItem.className = 'result-item';
-
-          const imgEl = document.createElement('img');
-          imgEl.src = item.image_url;
-          imgEl.alt = item.product_name || 'No Name';
-
-          imgEl.addEventListener('click', () => {
-            modalImage.src = item.image_url;
-            modalProductName.textContent = item.product_name || '';
-            modalProductPrice.textContent = item.price ? `価格：¥${item.price}` : '';
-            modalProductSizes.textContent = item.sizes && item.sizes.length > 0 ? `サイズ：${item.sizes.join(", ")}` : '';
-            modalProductColor.textContent = item.color ? `色：${item.color}` : '';
+      }else{
+        items.forEach(item=>{
+          const resultItem=document.createElement('div');
+          resultItem.className='result-item';
+          const imgEl=document.createElement('img');
+          imgEl.src=item.image_url;
+          imgEl.alt=item.product_name||'No Name';
+          imgEl.addEventListener('click',()=>{
+            modalImage.src=item.image_url;
+            modalProductName.textContent=item.product_name||'';
+            modalProductPrice.textContent=item.price?`価格：¥${item.price}`:'';
+            modalProductSizes.textContent=(item.sizes&&item.sizes.length>0)?`サイズ：${item.sizes.join(", ")}`:'';
+            modalProductColor.textContent=item.color?`色：${item.color}`:'';
             modalOverlay.classList.add('active');
           });
-
           resultItem.appendChild(imgEl);
           detailContent.appendChild(resultItem);
         });
       }
-
-      detailPanel.classList.remove('collapsed','open','expanded');
-      if (window.innerWidth <= 768) {
-        detailPanel.classList.add('open');
-        sidebar.classList.remove('open');
-      } else {
-        detailPanel.classList.add('expanded');
-      }
     }
 
-    function reShowDetailPanelWithColor() {
-      if (!currentlyOpenedStore || !currentlyOpenedAllItems) return;
-      let filtered = applyColorFilter(currentlyOpenedAllItems);
+    function reShowDetailPanelWithColor(){
+      if(!currentlyOpenedStore||!currentlyOpenedAllItems)return;
+      let filtered=applyColorFilter(currentlyOpenedAllItems);
       renderDetailPanel(filtered);
     }
 
-    function applyColorFilter(items) {
-      if (currentColor) {
-        return items.filter(i => i.color && i.color.toLowerCase() === currentColor.toLowerCase());
+    closeDetailBtn.addEventListener('click',()=>{
+      setPanelState(detailPanel,'collapsed');
+      lastCollapsedPanel='detail';
+      currentlyOpenedStore=null; currentlyOpenedAllItems=null;
+      if(window.innerWidth<=768){
+        setPanelState(sidebar,'open');
       }
-      return items;
-    }
-
-    document.getElementById('close-detail').addEventListener('click', () => {
-      detailPanel.classList.remove('open','expanded');
-      detailPanel.classList.add('collapsed');
-      currentlyOpenedStore = null;
-      currentlyOpenedAllItems = null;
-
-      if (window.innerWidth <= 768) {
-        sidebar.classList.add('open');
-      }
-
-      if (currentSelectedMarker) {
+      if(currentSelectedMarker){
         currentSelectedMarker.setIcon(defaultIcon);
-        currentSelectedMarker = null;
+        currentSelectedMarker=null;
       }
     });
 
-    modalClose.addEventListener('click', () => {
+    modalClose.addEventListener('click',()=>{
       modalOverlay.classList.remove('active');
     });
-    modalOverlay.addEventListener('click', (e) => {
-      if (e.target === modalOverlay) {
-        modalOverlay.classList.remove('active');
+    modalOverlay.addEventListener('click',(e)=>{
+      if(e.target===modalOverlay) modalOverlay.classList.remove('active');
+    });
+
+    showListButton.addEventListener('click',()=>{
+      if(window.innerWidth<=768){
+        if(lastCollapsedPanel==='sidebar'){
+          setPanelState(sidebar,'open');
+        }else if(lastCollapsedPanel==='detail'){
+          setPanelState(detailPanel,'open');
+        }
       }
     });
 
-    // ==== 慣性+スナップ＆感度向上対応 START ====
-    const handleBar = document.querySelector('#detail-panel .handle-bar');
-    let startY;
-    let startHeight;
-    let isDragging = false;
-
-    let lastY = 0;
-    let lastTime = 0;
-    let velocity = 0;
-    const friction = 0.95;
-    const animationThreshold = 0.001;
-    let animationFrameId = null;
-
-    const snapPoints = [0, 0.5, 1.0]; // collapsed(0%), open(50%), expanded(100%)
-
-    handleBar.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      isDragging = true;
-      cancelAnimationFrame(animationFrameId);
-      startY = e.touches[0].clientY;
-      startHeight = detailPanel.offsetHeight;
-      lastY = startY;
-      lastTime = performance.now();
-      velocity = 0;
-    }, { passive: false });
-
-    handleBar.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (!isDragging) return;
-      const currentY = e.touches[0].clientY;
-      const deltaY = startY - currentY;
-      const screenHeight = window.innerHeight;
-      let newHeight = startHeight + deltaY;
-      newHeight = Math.max(0, Math.min(screenHeight, newHeight));
-      detailPanel.style.height = newHeight + 'px';
-
-      // 速度計算
-      const now = performance.now();
-      const dt = now - lastTime;
-      if (dt > 0) {
-        velocity = (lastY - currentY) / dt; // px/ms
-      }
-      lastY = currentY;
-      lastTime = now;
-    }, { passive: false });
-
-    handleBar.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      isDragging = false;
-      const screenHeight = window.innerHeight;
-      let currentPanelHeight = detailPanel.offsetHeight;
-
-      function animateInertia() {
-        currentPanelHeight -= velocity * 16; 
-        velocity *= friction;
-
-        currentPanelHeight = Math.max(0, Math.min(screenHeight, currentPanelHeight));
-        detailPanel.style.height = currentPanelHeight + 'px';
-
-        if (Math.abs(velocity) > animationThreshold) {
-          animationFrameId = requestAnimationFrame(animateInertia);
-        } else {
-          snapToNearestPoint(currentPanelHeight / screenHeight);
+    function setPanelState(panel,state){
+      panel.classList.remove('collapsed','open','expanded');
+      if(state==='collapsed'){
+        panel.classList.add('collapsed');
+        panel.style.height='0%';
+        if(window.innerWidth<=768) listBar.style.display='block';
+      }else if(state==='open'){
+        panel.classList.add('open');
+        panel.style.height='50%';
+        if(window.innerWidth<=768) {
+          listBar.style.display='none';
+          panel.style.top='auto';
         }
-      }
-
-      animateInertia();
-    }, { passive: false });
-
-    function snapToNearestPoint(ratio) {
-      let closest = snapPoints[0];
-      let closestDist = Math.abs(ratio - closest);
-      for (let i = 1; i < snapPoints.length; i++) {
-        const dist = Math.abs(ratio - snapPoints[i]);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = snapPoints[i];
+      }else if(state==='expanded'){
+        panel.classList.add('expanded');
+        if(window.innerWidth<=768){
+          panel.style.top='60px';
+          panel.style.height='calc(100% - 60px)';
+          listBar.style.display='none';
+        }else{
+          panel.style.top='0px';
+          panel.style.height='100%';
         }
-      }
-
-      detailPanel.classList.remove('collapsed','open','expanded');
-      if (closest === 0) {
-        detailPanel.classList.add('collapsed');
-        detailPanel.style.height = '0%';
-      } else if (closest === 0.5) {
-        detailPanel.classList.add('open');
-        detailPanel.style.height = '50%';
-      } else {
-        detailPanel.classList.add('expanded');
-        detailPanel.style.height = '100%';
       }
     }
-    // ==== 慣性+スナップ＆感度向上対応 END ====
+
+    function enableFlickOnHandle(panel){
+      const handle=panel.querySelector('.handle-bar');
+      let startY=0;
+      let lastY=0;
+
+      handle.addEventListener('touchstart',(e)=>{
+        if(window.innerWidth<=768){
+          e.preventDefault();
+          startY=e.touches[0].clientY;
+          lastY=startY;
+        }
+      },{passive:false});
+      handle.addEventListener('touchmove',(e)=>{
+        if(window.innerWidth<=768){
+          e.preventDefault();
+          lastY=e.touches[0].clientY;
+        }
+      },{passive:false});
+      handle.addEventListener('touchend',(e)=>{
+        if(window.innerWidth>768)return;
+        const deltaY=startY-lastY;
+        const isOpen=panel.classList.contains('open');
+        const isExpanded=panel.classList.contains('expanded');
+
+        // openで上フリック→expanded
+        // expandedで下フリック→open
+        // openで下フリック→collapsed
+        if(isOpen){
+          if(deltaY>0){
+            // 上フリック: open→expanded
+            setPanelState(panel,'expanded');
+          }else if(deltaY<0){
+            // 下フリック: open→collapsed
+            setPanelState(panel,'collapsed');
+            if(panel===sidebar) lastCollapsedPanel='sidebar';
+            else if(panel===detailPanel) lastCollapsedPanel='detail';
+            currentlyOpenedStore=null; currentlyOpenedAllItems=null;
+          }
+        }else if(isExpanded){
+          if(deltaY<0){
+            // 下フリック: expanded→open
+            setPanelState(panel,'open');
+          }
+        }
+      },{passive:true});
+    }
+
+    if(window.innerWidth<=768){
+      setPanelState(sidebar,'open'); 
+      setPanelState(detailPanel,'collapsed');
+      enableFlickOnHandle(sidebar);
+      enableFlickOnHandle(detailPanel);
+    }else{
+      setPanelState(detailPanel,'collapsed'); 
+      sidebar.style.display="block";
+    }
   </script>
 </body>
 </html>
