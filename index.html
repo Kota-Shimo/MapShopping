@@ -114,6 +114,20 @@
       padding:10px 20px; border:1px solid #ccc; border-radius:10px;
       font-size:16px; cursor:pointer; background:#f0f0f0;
     }
+
+    /* 追加: 店舗ごとの区切りスタイル */
+    .store-item {
+      border:1px solid #ccc;
+      border-radius:5px;
+      padding:10px;
+      margin:10px 0;
+      background:#fff;
+    }
+    .store-item strong {
+      display:block;
+      font-size:16px;
+      margin-bottom:5px;
+    }
   </style>
 </head>
 <body>
@@ -334,6 +348,10 @@
       detailContent.innerHTML="";
 
       if(!storeItemsMap||Object.keys(storeItemsMap).length===0)return;
+
+      const weekdays = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const currentDay = weekdays[new Date().getDay()];
+
       for(const storeId in storeItemsMap){
         let items=storeItemsMap[storeId];
         items=applyColorFilter(items);
@@ -352,11 +370,28 @@
           currentSelectedMarker=marker;
         });
 
+        let hoursText="";
+        if(store.closed && store.closed.includes(currentDay)){
+          hoursText = "本日定休日";
+        } else if(store.hours && store.hours[currentDay]){
+          const dayHours = store.hours[currentDay];
+          if(typeof dayHours === 'string'){
+            hoursText = `本日の営業時間: ${dayHours}`;
+          } else if(dayHours.open && dayHours.close){
+            hoursText = `本日の営業時間: ${dayHours.open} - ${dayHours.close}`;
+          } else {
+            hoursText = "本日の営業時間情報が不明です";
+          }
+        } else {
+          hoursText = "営業時間情報なし";
+        }
+
         const sItem=document.createElement('div');
         sItem.className="store-item";
         sItem.innerHTML=`
-          <strong>${store.name}</strong><br>
-          住所:${store.address}
+          <strong>${store.name}</strong>
+          住所:${store.address}<br>
+          ${hoursText}
         `;
         sItem.onclick=()=>{
           map.setView([store.latitude,store.longitude],16);
@@ -480,7 +515,6 @@
 
       panel.addEventListener('touchstart',(e)=>{
         if(window.innerWidth<=768){
-          // フリック判定用のスタート位置を保存
           startY=e.touches[0].clientY;
           lastY=startY;
         }
@@ -488,7 +522,6 @@
       
       panel.addEventListener('touchmove',(e)=>{
         if(window.innerWidth<=768){
-          // スクロールは許可するため、基本的にpreventDefaultはしない
           lastY=e.touches[0].clientY;
         }
       },{passive:false});
@@ -496,7 +529,7 @@
       panel.addEventListener('touchend',(e)=>{
         if(window.innerWidth>768)return;
         const deltaY=startY - lastY;
-        const threshold = 50; // フリック感度の調整はこの値を変更
+        const threshold = 60;
 
         const isOpen=panel.classList.contains('open');
         const isExpanded=panel.classList.contains('expanded');
