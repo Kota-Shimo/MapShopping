@@ -23,7 +23,9 @@
     #sidebar {
       position:absolute; top:120px; left:10px; width:280px; height:calc(100% - 120px);
       background:rgba(255,255,255,0.9); overflow-y:auto; border:1px solid #ccc; box-sizing:border-box;
-      z-index:3001; display:none; transition:height 0.3s ease;
+      z-index:3001; display:none; 
+      /* トランジションをtransform→topに変更しheightと合わせてスムーズに */
+      transition: top 0.5s ease-in-out, height 0.5s ease-in-out;
     }
     #sidebar.open { display:block; }
 
@@ -31,7 +33,8 @@
       position:absolute; top:0; left:300px; width:300px;
       background:rgba(255,255,255,0.9); border-left:1px solid #ccc; box-sizing:border-box;
       z-index:5000; 
-      transition:height 0.3s ease;
+      /* トランジション強化 */
+      transition: top 0.5s ease-in-out, height 0.5s ease-in-out;
     }
     #detail-panel.collapsed { display:none; }
     #detail-panel.open, #detail-panel.expanded {
@@ -91,12 +94,12 @@
 
       #sidebar {
         top:auto; bottom:0; left:0; width:100%; border-right:none; border-top:1px solid #ccc; 
-        transition:height 0.3s ease; z-index:4000;
+        z-index:4000;
       }
 
       #detail-panel {
         top:auto; bottom:0; left:0; width:100%;
-        border-left:none; border-top:1px solid #ccc; transition:height 0.3s ease;
+        border-left:none; border-top:1px solid #ccc;
       }
 
       #detail-panel.expanded {
@@ -482,34 +485,31 @@
       }
     });
 
-    // setPanelStateを修正：top/height変更時はtransitionを一時オフ→リフロー→transitionオンの手順を統一
     function setPanelState(panel,state){
       panel.classList.remove('collapsed','open','expanded');
 
-      // トランジションを一時オフしてから位置変更
-      panel.style.transition='none';
+      // トランジション強制オフと再設定を削除し、CSSトランジション任せにする
+      // panel.style.transition='none'; <- 削除
 
       if(state==='collapsed'){
         if(window.innerWidth<=768) {
           listBar.style.display='block';
-          panel.style.top='100%';  // topを先に決める
-          panel.offsetHeight;      // リフロー強制
-          panel.style.height='0%'; // 次にheightを変更
-          panel.offsetHeight;
+          panel.style.top='100%'; 
+          // panel.offsetHeight; // 必要なら残してもいいがここでは不要
+          panel.style.height='0%'; 
+          // panel.offsetHeight;
         } else {
-          // PC表示時
           panel.style.height='0%';
         }
         panel.classList.add('collapsed');
       }else if(state==='open'){
         if(window.innerWidth<=768) {
           listBar.style.display='none';
-          panel.style.top='50%';   // topを先に
-          panel.offsetHeight;      // リフロー
-          panel.style.height='50%';// height変更
-          panel.offsetHeight;
+          panel.style.top='50%';  
+          // panel.offsetHeight;
+          panel.style.height='50%';
+          // panel.offsetHeight;
         } else {
-          // PC時はopenは固定高さ処理
           panel.style.height='50%';
         }
         panel.classList.add('open');
@@ -517,18 +517,18 @@
         panel.classList.add('expanded');
         if(window.innerWidth<=768){
           panel.style.top='60px';
-          panel.offsetHeight;
+          // panel.offsetHeight;
           panel.style.height='calc(100% - 60px)';
           listBar.style.display='none';
-          panel.offsetHeight;
+          // panel.offsetHeight;
         }else{
           panel.style.top='0px';
           panel.style.height='100%';
         }
       }
 
-      // 最後にheightのみのトランジションを再設定
-      panel.style.transition='height 0.3s ease';
+      // panel.style.transition='height 1.2s ease-in-out'; <- 削除
+      // CSS内でtransitionを設定済みのため不要
     }
 
     function enableFlickOnHandle(panel){
