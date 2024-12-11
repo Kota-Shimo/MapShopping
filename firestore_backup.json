@@ -1,13 +1,13 @@
 {
     "2gQimhkUzf2tU7Y9ZLas": {
-        "address": "京都府京都市下京区麩屋町通高辻上ル鍋屋町244-1",
         "latitude": 35.00054907726847,
+        "address": "京都府京都市下京区麩屋町通高辻上ル鍋屋町244-1",
         "longitude": 135.76562278043016,
         "name": "lloomm"
     },
     "E5PUEvaXqE2VMzI1e3ZY": {
-        "address": "京都府京都市東山区二町目50",
         "latitude": 35.009213860879825,
+        "address": "京都府京都市東山区二町目50",
         "longitude": 135.77530175159507,
         "name": "RADLOSTEL"
     },
@@ -42,8 +42,8 @@
         "name": "HUF Tokyo"
     },
     "store_002": {
-        "address": "Kyoto, Japan",
         "latitude": 35.006894413711485,
+        "address": "Kyoto, Japan",
         "longitude": 135.76715794306384,
         "name": "HUF Kyoto"
     }

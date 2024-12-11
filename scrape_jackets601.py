@@ -14,12 +14,12 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-base_url = "https://www.hufworldwide.jp/collections/jackets"
+base_url = "https://601-store.com/collections/coat"
 driver_path = r"C:\Users\kotas\Downloads\chromedriver-win64\chromedriver.exe"
 service = Service(driver_path)
 
-fallback_image_url = "https://via.placeholder.com/100?text=No+Image"
-store_id = "store_002"
+fallback_image_url = "https://via.placeholder.com/600x600.png?text=No+Image"
+store_id = "Vv9G8GV46RYfp6lNJmfK"
 category_id = "outerwear"
 
 def extract_product_base_name(variant_name):
@@ -40,14 +40,14 @@ def strict_image_search_by_color(product_name, color, products):
     p_lower = product_name.lower()
     c_lower = color.lower()
 
-    # color+product_name含むaltを優先
-    color_candidates = []
-    for hp in products:
-        hname = hp["name"].lower()
-        if c_lower in hname and p_lower in hname:
-            color_candidates.append(hp["image_url"])
-    if color_candidates:
-        return color_candidates[0]
+    if c_lower != "no color" and c_lower:
+        color_candidates = []
+        for hp in products:
+            hname = hp["name"].lower()
+            if c_lower in hname and p_lower in hname:
+                color_candidates.append(hp["image_url"])
+        if color_candidates:
+            return color_candidates[0]
 
     # product_nameのみ
     name_candidates = []
@@ -66,6 +66,8 @@ products_from_html_all = []
 try:
     driver = webdriver.Chrome(service=service)
     page = 1
+    seen_variants = set()  # 重複防止用セット
+
     while True:
         page_url = f"{base_url}?page={page}"
         driver.get(page_url)
@@ -73,7 +75,7 @@ try:
 
         html = driver.page_source
         soup = BeautifulSoup(html, 'html.parser')
-        product_divs = soup.find_all('div', class_='boost-sd__product-item')
+        product_divs = soup.find_all('div', class_='card-wrapper')
 
         if len(product_divs) == 0:
             break
@@ -84,7 +86,16 @@ try:
             if not img_tag:
                 continue
             product_name_html = img_tag.get('alt', 'No Name').strip()
-            product_image_url = img_tag.get('src') or img_tag.get('data-src') or img_tag.get('data-srcset')
+            
+            # 画像URL取得ロジック改善
+            product_image_url = img_tag.get('src') or img_tag.get('data-src')
+            if not product_image_url:
+                # srcやdata-srcがない場合、srcsetから取得
+                srcset = img_tag.get('srcset')
+                if srcset:
+                    first_src = srcset.split()[0]
+                    product_image_url = first_src
+
             if product_image_url and product_image_url.startswith('//'):
                 product_image_url = 'https:' + product_image_url
             if product_image_url:
@@ -94,6 +105,7 @@ try:
                 })
         products_from_html_all.extend(products_from_html)
 
+        # ページ内にShopifyAnalytics.metaが含まれたscriptがあるかチェック
         script_tag = soup.find('script', string=lambda x: x and "ShopifyAnalytics.meta" in x)
         if not script_tag:
             break
@@ -122,24 +134,42 @@ try:
             if not variants:
                 continue
 
-            if not title:
+            if not title and variants:
                 title = extract_product_base_name(variants[0]["name"]) or "No Name"
 
             for variant in variants:
+                variant_id = variant["id"]
                 variant_name = variant["name"]
                 variant_price = variant["price"] / 100
 
-                parts = variant_name.split('/')
-                size = None
-                base_name = variant_name
-                if len(parts) > 1:
-                    size = parts[-1].strip()
-                    base_name = '/'.join(parts[:-1]).strip()
+                if variant_id in seen_variants:
+                    continue
+                seen_variants.add(variant_id)
 
-                base_parts = base_name.rsplit(' - ', 1)
-                color = "No Color"
-                if len(base_parts) > 1:
-                    color = base_parts[-1].strip()
+                parts = variant_name.split('/')
+                # colorとsize抽出ロジック修正
+                # 例: "FUMIKA_UCHIDA / SPLASHED PATTERN ZIP-UP BLOUSON / BROWN - 38"
+                # 最後の要素が "BROWN - 38"
+                # それを' - 'で分けてcolorとsizeを取得
+                if len(parts) > 1:
+                    suffix = parts[-1].strip()  # "BROWN - 38" のような形式
+                    prefix = '/'.join(parts[:-1]).strip()
+                else:
+                    suffix = parts[0].strip()
+                    prefix = ""
+
+                suffix_parts = suffix.split(' - ')
+                if len(suffix_parts) == 2:
+                    color = suffix_parts[0].strip()
+                    size = suffix_parts[1].strip()
+                else:
+                    # カラーとサイズどちらかが取れない場合のフォールバック
+                    # 例えばサイズがない、またはカラーサイズ分けがない場合
+                    color = "No Color"
+                    size = None
+
+                if not title:
+                    title = extract_product_base_name(prefix) or "No Name"
 
                 variant_image_id = variant.get("image_id")
                 variant_featured_image = None
@@ -216,6 +246,10 @@ def get_color_image(pdata):
 
     # 3. HTMLフォールバック(厳密)
     img = strict_image_search_by_color(pdata["product_name"], pdata["color"], products_from_html_all)
+    if not img:
+        # カラー指定で見つからない場合はカラー無視
+        img = strict_image_search_by_color(pdata["product_name"], "", products_from_html_all)
+
     if not img:
         img = fallback_image_url
     else:

@@ -16,7 +16,7 @@
       background:rgba(255,255,255,0.9); padding:10px; box-sizing:border-box; border-bottom:1px solid #ccc;
     }
     #category-container select {
-      width:100%; padding:8px; font-size:14px; border:1px solid #ccc; border-radius:5px;
+      width:100%; padding:13px; font-size:18px; border:1px solid #ccc; border-radius:5px;
       box-sizing:border-box; margin-bottom:5px;
     }
 
@@ -103,8 +103,8 @@
       }
 
       #detail-panel.expanded {
-        top:60px !important;
-        height:calc(100% - 60px) !important;
+        top:80px !important;
+        height:calc(100% - 80px) !important;
       }
     }
 
@@ -516,9 +516,9 @@
       }else if(state==='expanded'){
         panel.classList.add('expanded');
         if(window.innerWidth<=768){
-          panel.style.top='60px';
+          panel.style.top='80px';
           // panel.offsetHeight;
-          panel.style.height='calc(100% - 60px)';
+          panel.style.height='calc(100% - 80px)';
           listBar.style.display='none';
           // panel.offsetHeight;
         }else{
