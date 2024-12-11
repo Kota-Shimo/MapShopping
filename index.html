@@ -529,7 +529,7 @@
       panel.addEventListener('touchend',(e)=>{
         if(window.innerWidth>768)return;
         const deltaY=startY - lastY;
-        const threshold = 150;
+        const threshold = 100;
 
         const isOpen=panel.classList.contains('open');
         const isExpanded=panel.classList.contains('expanded');
