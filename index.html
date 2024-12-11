@@ -46,9 +46,9 @@
       position:sticky; top:0; background:#fff; z-index:1001;
     }
     .handle-bar {
-      width:50px; height:20px; /* 高さ拡大 */
+      width:50px; height:20px;
       background:#aaa; border-radius:10px; margin:10px auto; cursor:grab;
-      touch-action:none; /* ブラウザのスクロールを抑制してフリック検出を確実に */
+      touch-action:none;
     }
     .close-button {
       text-align:right; border-bottom:1px solid #ccc; padding:10px;
@@ -115,7 +115,6 @@
       font-size:16px; cursor:pointer; background:#f0f0f0;
     }
 
-    /* 追加: 店舗ごとの区切りスタイル */
     .store-item {
       border:1px solid #ccc;
       border-radius:5px;
@@ -483,30 +482,53 @@
       }
     });
 
+    // setPanelStateを修正：top/height変更時はtransitionを一時オフ→リフロー→transitionオンの手順を統一
     function setPanelState(panel,state){
       panel.classList.remove('collapsed','open','expanded');
+
+      // トランジションを一時オフしてから位置変更
+      panel.style.transition='none';
+
       if(state==='collapsed'){
+        if(window.innerWidth<=768) {
+          listBar.style.display='block';
+          panel.style.top='100%';  // topを先に決める
+          panel.offsetHeight;      // リフロー強制
+          panel.style.height='0%'; // 次にheightを変更
+          panel.offsetHeight;
+        } else {
+          // PC表示時
+          panel.style.height='0%';
+        }
         panel.classList.add('collapsed');
-        panel.style.height='0%';
-        if(window.innerWidth<=768) listBar.style.display='block';
       }else if(state==='open'){
-        panel.classList.add('open');
-        panel.style.height='50%';
         if(window.innerWidth<=768) {
           listBar.style.display='none';
-          panel.style.top='auto';
+          panel.style.top='50%';   // topを先に
+          panel.offsetHeight;      // リフロー
+          panel.style.height='50%';// height変更
+          panel.offsetHeight;
+        } else {
+          // PC時はopenは固定高さ処理
+          panel.style.height='50%';
         }
+        panel.classList.add('open');
       }else if(state==='expanded'){
         panel.classList.add('expanded');
         if(window.innerWidth<=768){
           panel.style.top='60px';
+          panel.offsetHeight;
           panel.style.height='calc(100% - 60px)';
           listBar.style.display='none';
+          panel.offsetHeight;
         }else{
           panel.style.top='0px';
           panel.style.height='100%';
         }
       }
+
+      // 最後にheightのみのトランジションを再設定
+      panel.style.transition='height 0.3s ease';
     }
 
     function enableFlickOnHandle(panel){
@@ -529,7 +551,7 @@
       panel.addEventListener('touchend',(e)=>{
         if(window.innerWidth>768)return;
         const deltaY=startY - lastY;
-        const threshold = 100;
+        const threshold = 80;
 
         const isOpen=panel.classList.contains('open');
         const isExpanded=panel.classList.contains('expanded');
