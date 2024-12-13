@@ -59,14 +59,25 @@
 
     #detail-content {
       flex:1; overflow-y:auto; padding:10px;
-      display:grid; grid-template-columns:1fr 1fr; grid-gap:10px;
+      display:grid; 
+      grid-template-columns:1fr 1fr 1fr; 
+      grid-gap:5px;
     }
 
     .result-item {
-      background:#fff; border:1px solid #ccc; padding:10px;
-      display:flex; align-items:center; justify-content:center; flex-direction:column;
+      background:none; 
+      border:none; 
+      padding:0;
+      /* display:flex; align-items:center; justify-content:center; flex-direction:column; 削除 */
     }
-    .result-item img { max-width:100%; height:auto; cursor:pointer; }
+    .result-item img { 
+      max-width:100%; 
+      height:auto; 
+      cursor:pointer;
+      display:block; 
+      margin:0; 
+      padding:0;
+    }
 
     .modal-overlay {
       display:none; position:fixed; z-index:11000; left:0; top:0; width:100%; height:100%;
@@ -80,7 +91,7 @@
       display:block; margin:0 auto; object-fit:contain; max-width:90vw; max-height:80vh;
     }
     .modal-close {
-      position:absolute; top:10px; right:10px; background:#fff; border:none; font-size:20px; cursor:pointer;
+      position:absolute; bottom:10px; left:10px; background:#fff; border:none; font-size:20px; cursor:pointer;
       border-radius:50%; width:32px; height:32px; line-height:32px; text-align:center;
     }
     .modal-product-name, .modal-product-price, .modal-product-sizes, .modal-product-color {
@@ -488,16 +499,11 @@
     function setPanelState(panel,state){
       panel.classList.remove('collapsed','open','expanded');
 
-      // トランジション強制オフと再設定を削除し、CSSトランジション任せにする
-      // panel.style.transition='none'; <- 削除
-
       if(state==='collapsed'){
         if(window.innerWidth<=768) {
           listBar.style.display='block';
           panel.style.top='100%'; 
-          // panel.offsetHeight; // 必要なら残してもいいがここでは不要
           panel.style.height='0%'; 
-          // panel.offsetHeight;
         } else {
           panel.style.height='0%';
         }
@@ -506,9 +512,7 @@
         if(window.innerWidth<=768) {
           listBar.style.display='none';
           panel.style.top='50%';  
-          // panel.offsetHeight;
           panel.style.height='50%';
-          // panel.offsetHeight;
         } else {
           panel.style.height='50%';
         }
@@ -517,18 +521,13 @@
         panel.classList.add('expanded');
         if(window.innerWidth<=768){
           panel.style.top='80px';
-          // panel.offsetHeight;
           panel.style.height='calc(100% - 80px)';
           listBar.style.display='none';
-          // panel.offsetHeight;
         }else{
           panel.style.top='0px';
           panel.style.height='100%';
         }
       }
-
-      // panel.style.transition='height 1.2s ease-in-out'; <- 削除
-      // CSS内でtransitionを設定済みのため不要
     }
 
     function enableFlickOnHandle(panel){
