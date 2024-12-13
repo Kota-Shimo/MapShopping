@@ -24,7 +24,6 @@
       position:absolute; top:120px; left:10px; width:280px; height:calc(100% - 120px);
       background:rgba(255,255,255,0.9); overflow-y:auto; border:1px solid #ccc; box-sizing:border-box;
       z-index:3001; display:none; 
-      /* トランジションをtransform→topに変更しheightと合わせてスムーズに */
       transition: top 0.5s ease-in-out, height 0.5s ease-in-out;
     }
     #sidebar.open { display:block; }
@@ -33,7 +32,6 @@
       position:absolute; top:0; left:300px; width:300px;
       background:rgba(255,255,255,0.9); border-left:1px solid #ccc; box-sizing:border-box;
       z-index:5000; 
-      /* トランジション強化 */
       transition: top 0.5s ease-in-out, height 0.5s ease-in-out;
     }
     #detail-panel.collapsed { display:none; }
@@ -62,13 +60,14 @@
       display:grid; 
       grid-template-columns:1fr 1fr 1fr; 
       grid-gap:5px;
+      align-content:start;
+      align-items:start;
     }
 
     .result-item {
       background:none; 
       border:none; 
       padding:0;
-      /* display:flex; align-items:center; justify-content:center; flex-direction:column; 削除 */
     }
     .result-item img { 
       max-width:100%; 
