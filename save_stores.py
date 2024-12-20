@@ -10,7 +10,7 @@ db = firestore.client()
 
 # ユーザーから提供された店舗情報（Pythonの辞書として定義）
 stores_data = {
-    "2gQimhkUzf2tU7Y9ZLas": {
+    "lloomm": {
         "address": "京都府京都市下京区麩屋町通高辻上る鍋屋町244-1",
         "latitude": 35.00054907726847,
         "longitude": 135.76562278043016,
@@ -27,7 +27,7 @@ stores_data = {
         "closed": [],
         "contact": "075-354-0373"
     },
-    "E5PUEvaXqE2VMzI1e3ZY": {
+    "RADLOSTEL": {
         "address": "京都府京都市東山区二町目50",
         "latitude": 35.009213860879825,
         "longitude": 135.77530175159507,
@@ -44,7 +44,7 @@ stores_data = {
         "closed": [],
         "contact": "080-4563-7032"
     },
-    "R8T1NE6Bf7qC7Z7woeXG": {
+    "ATTEMPT Kyoto": {
         "address": "京都市中京区船屋町387 第2四寅ビル1F",
         "latitude": 35.00551736819462,
         "longitude": 135.76616370741652,
@@ -61,7 +61,7 @@ stores_data = {
         "closed": ["Wednesday"],
         "contact": "075-366-4330"
     },
-    "Vv9G8GV46RYfp6lNJmfK": {
+    "601": {
         "address": "京都府京都市左京区聖護院東町7",
         "latitude": 35.00642050292674,
         "longitude": 135.76511808043043,
@@ -78,7 +78,7 @@ stores_data = {
         "closed": [],
         "contact": "075-771-0106"
     },
-    "X2xdbejVdkfoVzv9O1TM": {
+    "BELLEGANZA": {
         "address": "京都市中京区堺町通錦上る菊屋町519",
         "latitude": 35.0085980502084,
         "longitude": 135.7473479246086,
@@ -95,7 +95,7 @@ stores_data = {
         "closed": [],
         "contact": "075-211-1199"
     },
-    "fqBgbW53nwQRDUnAdPnQ": {
+    "hillside": {
         "address": "京都府京都市上京区出水通堀川東入る出水町249-1",
         "latitude": 35.019925981430134,
         "longitude": 135.76919740346833,
@@ -112,24 +112,7 @@ stores_data = {
         "closed": [],
         "contact": "075-414-2050"
     },
-    "store_001": {
-        "address": "東京都渋谷区神宮前4丁目25-10",
-        "latitude": 35.6895,
-        "longitude": 139.6917,
-        "name": "HUF Tokyo",
-        "hours": {
-            "Monday": "11:00 - 20:00",
-            "Tuesday": "11:00 - 20:00",
-            "Wednesday": "11:00 - 20:00",
-            "Thursday": "11:00 - 20:00",
-            "Friday": "11:00 - 20:00",
-            "Saturday": "11:00 - 20:00",
-            "Sunday": "11:00 - 20:00"
-        },
-        "closed": [],
-        "contact": "03-5778-8126"
-    },
-    "store_002": {
+    "HUF Kyoto": {
         "address": "京都府京都市中京区寺町通四条上る中之町559",
         "latitude": 35.006894413711485,
         "longitude": 135.76715794306384,
@@ -145,6 +128,23 @@ stores_data = {
         },
         "closed": [],
         "contact": "075-256-8156"
+    },
+    "乙景": {
+        "address": "京都府京都市下京区枡屋町473-7",
+        "latitude": 34.99938871590129,
+        "longitude": 135.76634766508752,  
+        "name": "乙景",
+        "hours": {
+            "Monday": "11:00 - 18:00",
+            "Tuesday": "11:00 - 18:00",
+            "Wednesday": "11:00 - 18:00",
+            "Thursday": "定休日",
+            "Friday": "11:00 - 18:00",
+            "Saturday": "11:00 - 19:00",
+            "Sunday": "11:00 - 18:00"
+        },
+        "closed": ["Thursday"],
+        "contact": "075-285-3137"
     }
 }
 
