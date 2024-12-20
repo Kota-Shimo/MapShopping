@@ -11,7 +11,7 @@ db = firestore.client()
 # カテゴリ一覧（Pythonの辞書として定義）
 categories = [
     { "id": "outerwear", "name": "アウターウェア" },
-    { "id": "tops", "name": "トップス" },
+    { "id": "tops", "down jacket": "ダウンジャケット" },
     { "id": "bottoms", "name": "ボトムス" },
     { "id": "jackets", "name": "ジャケット" },
     { "id": "shirts", "name": "シャツ" },

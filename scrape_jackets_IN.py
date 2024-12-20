@@ -20,13 +20,13 @@ db = firestore.client()
 # =============================================
 # ★ターゲットURLと設定★
 # =============================================
-base_url = "https://store.in-net.gr.jp/category/OUTER_M/"
+base_url = "https://store.in-net.gr.jp/category/DOWN_M/"
 driver_path = r"C:\Users\kotas\Downloads\chromedriver-win64\chromedriver.exe"
 service = Service(driver_path)
 
 fallback_image_url = "https://via.placeholder.com/100?text=No+Image"
 store_id = "印_裏寺本店_セレクトショップ"
-category_id = "outerwear"
+category_id = "down jacket"
 
 # =============================================
 # ★ヘルパー関数★

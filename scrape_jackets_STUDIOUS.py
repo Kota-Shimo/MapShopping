@@ -19,7 +19,7 @@ service = Service(driver_path)
 
 fallback_image_url = "https://via.placeholder.com/100?text=No+Image"
 store_id = "STUDIOUS_MENS_京都三条店"
-category_id = "outerwear"
+category_id = "down jacket"
 
 driver = None
 products_list = []
